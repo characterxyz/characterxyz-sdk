@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: Character XYZ SDK API
+  version: v1
+  description: |
+    What an embedded client (web, Android, Apple) calls. The single source the
+    platform SDKs generate their types from. Design: canon/docs/sdk-design.md.
+
+    Errors are `{message}`; validation failures are 422 `{message, errors: [{path, message}]}`.
+    Event streams are `text/event-stream`, read with fetch (an Authorization header), never EventSource.
+servers:
+  - url: https://api.character.xyz
+security:
+  - session: []
+paths:
+  /sdk/v1/sessions:
+    post:
+      summary: Exchange a key for a session
+      description: |
+        Browser: `{publishableKey, agentId?, visitorId?}` from an allowed Origin.
+        Server: `Authorization: Bearer cxyz_sk_…` with `{agentId?, visitor: {id}, origin?}` and NO Origin header.
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSession' }
+      responses:
+        '200': { description: Session, content: { application/json: { schema: { $ref: '#/components/schemas/SessionEnvelope' } } } }
+        '401': { description: Unrecognised or revoked key }
+        '403': { description: Site not allowed, agent not allowed, or a secret key from a browser }
+        '429': { description: Too many sessions from this address }
+  /sdk/v1/session:
+    get:
+      summary: Describe the current session (for a token minted by your server)
+      responses:
+        '200': { description: Session without the token, content: { application/json: { schema: { $ref: '#/components/schemas/SessionEnvelope' } } } }
+  /sdk/v1/agent:
+    get:
+      summary: The session's agent
+      responses:
+        '200': { description: Agent card, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/AgentCard' } } } } } }
+  /sdk/v1/chat/messages:
+    get:
+      summary: This visitor's recent messages with the agent
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        '200': { description: Messages, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { messages: { type: array, items: { $ref: '#/components/schemas/ChatMessage' } } } } } } } } }
+    post:
+      summary: Send a message; the reply streams back
+      description: |
+        Events: `delta {text}` (repeated) then `done {id, text, createdAt}`, or `error {message}`.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [text], properties: { text: { type: string, minLength: 1, maxLength: 2000 } } }
+      responses:
+        '200': { description: Event stream, content: { text/event-stream: {} } }
+        '403': { description: Chat is off for this site }
+        '422': { description: Empty or too long }
+        '429': { description: Too fast (1/s, burst 5) or the daily cap (300) }
+  /sdk/v1/calls:
+    post:
+      summary: Join the line for a voice call (or go straight through)
+      responses:
+        '200': { description: Joined, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/CallJoin' } } } } } }
+        '402': { description: The account cannot pay for a minute }
+        '403': { description: Calls are off for this site }
+        '429': { description: The line is full }
+  /sdk/v1/calls/{callId}/events:
+    get:
+      summary: Follow a call
+      description: |
+        Events: `queued {position, etaSeconds, maxWaitSeconds}` · `ready {ticket, holdSeconds}` ·
+        `live {maxSeconds, elapsedSeconds}` · `ended {reason, seconds}`.
+        Reasons: hangup, left, missed, timeout, limit, credits, busy, failed.
+        Keep it open while waiting: a caller nobody is listening for is dropped after 20 s.
+      parameters:
+        - { name: callId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Event stream, content: { text/event-stream: {} } }
+        '404': { description: Not this visitor's call }
+  /sdk/v1/calls/{callId}:
+    delete:
+      summary: Leave the line, or hang up
+      parameters:
+        - { name: callId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Left }
+  /sdk/v1/calls/socket:
+    get:
+      summary: The call's voice socket (WebSocket)
+      description: |
+        Offer the subprotocol `cxyz-ticket.<ticket>` (from the `ready` event; one use, 30 s).
+        Then speak the agent socket protocol: send `{"type":"agent_identity","agent_id":…,"blendshapes":false}`,
+        microphone frames as binary 16 kHz mono PCM16 (480 samples), `{"type":"heartbeat"}` every 25 s,
+        `playback_started` / `playback_ended` / `speech_ended` around each reply, `interrupt {correlationId, heardMs}`.
+        Receive `AgentSpeechMeta`, `InteractorTranscript`, `AgentReplyTranscript`, `agent_status`, `turn_cancelled`
+        and binary `CXYZ` packets (kind 1 = PCM16 voice).
+      security: []
+      responses:
+        '101': { description: Switching protocols }
+        '401': { description: Missing, used or expired ticket }
+components:
+  securitySchemes:
+    session:
+      type: http
+      scheme: bearer
+      description: A session token (`cxs1.…`), 15 minutes, bound to one site, agent and visitor.
+  schemas:
+    CreateSession:
+      type: object
+      properties:
+        publishableKey: { type: string, pattern: '^cxyz_pk_(live|test)_[A-Za-z0-9]{24}$' }
+        agentId: { type: string }
+        visitorId: { type: string, pattern: '^v_[A-Za-z0-9]{24}$' }
+        visitor: { type: object, properties: { id: { type: string, maxLength: 128 } } }
+        origin: { type: string }
+    SessionEnvelope:
+      type: object
+      properties:
+        message: { type: string }
+        data: { $ref: '#/components/schemas/Session' }
+    Session:
+      type: object
+      required: [token, expiresAt, visitorId, agent, features, appearance, mode]
+      properties:
+        token: { type: string }
+        expiresAt: { type: integer, description: Unix seconds }
+        visitorId: { type: string }
+        agent: { $ref: '#/components/schemas/AgentCard' }
+        features:
+          type: object
+          properties:
+            chat: { type: boolean }
+            call: { type: boolean }
+            maxCallMinutes: { type: integer }
+        appearance: { type: object, description: The widget's saved look (opaque to clients that draw their own UI) }
+        mode: { type: string, enum: [live, test] }
+    AgentCard:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        tagline: { type: string }
+        locale: { type: [string, 'null'] }
+        cameo: {}
+        video:
+          type: [object, 'null']
+          properties:
+            anchor: { type: object, properties: { url: { type: string }, alphaUrl: { type: string } } }
+            clips:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  url: { type: string }
+                  alphaUrl: { type: string, description: VP9 WebM with alpha }
+                  packedUrl: { type: string, description: H.264, colour | matte side by side }
+                  seconds: { type: number }
+            face: { type: object, description: Eyes and chin in the anchor still's pixels }
+    ChatMessage:
+      type: object
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [visitor, agent] }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+    CallJoin:
+      type: object
+      properties:
+        callId: { type: string }
+        state: { type: string, enum: [ready, queued] }
+        position: { type: integer }
+        etaSeconds: { type: integer }

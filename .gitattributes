@@ -1,0 +1,32 @@
+# One line ending in the repo whatever machine checks it out: Windows, macOS
+# and Linux contributors all commit LF, and the shells that need CRLF get it.
+* text=auto eol=lf
+
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+*.sln  text eol=crlf
+*.csproj text eol=crlf
+
+# Xcode merges its project file badly line by line; union keeps both sides.
+*.pbxproj merge=union
+
+# Binaries are never diffed or normalised.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.mp3  binary
+*.mp4  binary
+*.wav  binary
+*.webm binary
+*.woff binary
+*.woff2 binary
+*.jar  binary
+*.aar  binary
+*.so   binary
+*.dylib binary
+*.dll  binary
+*.xcframework binary

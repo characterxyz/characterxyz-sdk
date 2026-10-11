@@ -1,0 +1,26 @@
+{
+  "name": "characterxyz-sdk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Character XYZ SDKs: embed a Character XYZ agent (chat + voice call) in web, Android and Apple apps.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.13.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter ./packages/** run build",
+    "test": "pnpm -r --filter ./packages/** run test",
+    "typecheck": "pnpm -r --filter ./packages/** run typecheck",
+    "size": "node scripts/size.mjs",
+    "check": "pnpm build && pnpm typecheck && pnpm test && pnpm size",
+    "demo": "node examples/demo/server.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "happy-dom": "^20.14.6",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.3"
+  }
+}

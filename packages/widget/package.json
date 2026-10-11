@@ -1,0 +1,31 @@
+{
+  "name": "@characterxyz/widget",
+  "version": "0.1.0",
+  "description": "Character XYZ in any site: the agent in the corner with chat and voice calls. One script tag, or a Web Component.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": ["./dist/index.js", "./dist/cx.js"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cx.js": "./dist/cx.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@characterxyz/web": "workspace:*"
+  },
+  "devDependencies": {
+    "preact": "^10.29.8"
+  }
+}

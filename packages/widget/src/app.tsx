@@ -502,7 +502,11 @@ export function App({ client, config, bind, onView }: AppProps) {
                 <div class={`msg msg--${m.role} ${m.failed ? 'msg--failed' : ''} ${m.streaming ? 'caret' : ''}`} part={`message message-${m.role}`}>
                   {m.role === 'agent' ? <Rich text={m.text} /> : m.text}
                 </div>
-                {m.failed ? (
+                {m.failed && m.error ? (
+                  <div class="msg__why" role="status">
+                    {m.error}
+                  </div>
+                ) : m.failed ? (
                   <button class="msg__retry" onClick={() => void client.chat.retry(m.id).catch(() => {})}>
                     <RetryIcon /> Not sent · Retry
                   </button>
@@ -707,7 +711,7 @@ export function App({ client, config, bind, onView }: AppProps) {
               <div class="title">{s ? copy.title : `Call ${name}`}</div>
               <div class="note">{s ? (s.endReason === 'hangup' && elapsed ? `${clock(elapsed)} · ${copy.body}` : s.error ?? copy.body) : `Talk with ${name} in real time.`}</div>
               <div class="btn-row">
-                {canCall && s?.endReason !== 'credits' && s?.endReason !== 'unavailable' ? (
+                {canCall && s?.endReason !== 'credits' && s?.endReason !== 'unavailable' && s?.endReason !== 'daily_limit' ? (
                   <button
                     class="btn btn--accent"
                     onClick={() => {

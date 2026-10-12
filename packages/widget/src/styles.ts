@@ -194,6 +194,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .msg--visitor + .msg--visitor, .msg--agent + .msg--agent { margin-top: -2px; }
 .msg--failed { opacity: .65; }
 .msg__retry { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--cx-danger); align-self: flex-end; }
+.msg__why { margin-top: 4px; font-size: 12px; color: var(--cx-ink-2); align-self: flex-end; text-align: right; max-width: 85%; }
 .caret::after { content: ""; display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: -2px; border-radius: 2px; background: currentColor; opacity: .55; animation: cx-blink 1s steps(2) infinite; }
 .typing { display: inline-flex; gap: 4px; padding: 13px 14px; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--cx-ink-3); animation: cx-bounce 1.2s var(--cx-ease) infinite; }

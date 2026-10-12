@@ -56,6 +56,8 @@ export interface ChatMessage {
   streaming?: boolean;
   /** Set when a visitor's message could not be answered. */
   failed?: boolean;
+  /** Why, in words a visitor can read (a daily limit, a slow-down). */
+  error?: string;
 }
 
 export type CallPhase =
@@ -77,7 +79,11 @@ export type CallEndReason =
   | 'busy'
   | 'failed'
   | 'mic-denied'
-  | 'unavailable';
+  | 'unavailable'
+  /** Nobody spoke for a minute, so the server hung up. */
+  | 'silence'
+  /** The site's call minutes for today are used up. */
+  | 'daily_limit';
 
 export interface CallState {
   phase: CallPhase;

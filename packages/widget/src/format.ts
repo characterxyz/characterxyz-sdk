@@ -49,6 +49,10 @@ export function endCopy(reason: string | null, name: string): { title: string; b
       return { title: 'All lines are busy', body: 'Try again in a few minutes, or keep chatting.' };
     case 'mic-denied':
       return { title: 'Microphone needed', body: 'Allow the microphone in your browser to talk, or keep chatting.' };
+    case 'silence':
+      return { title: 'Call ended', body: `The line was quiet for a minute, so ${name} hung up. Call again any time.` };
+    case 'daily_limit':
+      return { title: 'Calls are resting', body: 'Calls are done for today. Chat is open.' };
     case 'credits':
     case 'unavailable':
       return { title: 'Calls are unavailable', body: 'Calls are not available right now. Chat is open.' };

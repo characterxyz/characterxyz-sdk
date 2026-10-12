@@ -101,7 +101,9 @@ export class Chat extends Emitter<ChatEvents> {
       const err = e instanceof CxError ? e : new CxError('network', 'The reply was cut off. Try again.');
       this.list = this.list.filter((m) => m.id !== reply.id);
       const idx = this.list.findIndex((m) => m.id === mine.id);
-      if (idx !== -1) this.list[idx] = { ...mine, failed: true };
+      // A refusal the server explained (a daily limit, a slow-down) is shown as
+      // it was said; anything else is the generic "not sent".
+      if (idx !== -1) this.list[idx] = { ...mine, failed: true, ...(err.status === 429 ? { error: err.message } : {}) };
       this.publish();
       if ((e as Error)?.name !== 'AbortError') this.emit('error', err);
       throw err;

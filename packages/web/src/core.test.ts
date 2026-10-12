@@ -165,6 +165,16 @@ describe('chat', () => {
     expect(chat.messages.map((x) => x.text)).toEqual(['hello', 'ok']);
   });
 
+  it("keeps the server's reason when a message is refused at a limit", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Chat is resting for today. Please come back tomorrow.' }), { status: 429 }),
+    );
+    const chat = new Chat(API, m);
+    chat.on('error', () => {});
+    await expect(chat.send('hello')).rejects.toThrow(/resting/);
+    expect(chat.messages[0]).toMatchObject({ failed: true, error: 'Chat is resting for today. Please come back tomorrow.' });
+  });
+
   it('refuses an empty message and a second send while busy', async () => {
     const chat = new Chat(API, m);
     await expect(chat.send('   ')).rejects.toThrow();

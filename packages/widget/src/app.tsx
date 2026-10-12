@@ -24,6 +24,8 @@ export interface AppProps {
 }
 
 const GREETED_KEY = 'cxyz:greeted';
+/** Set once the launcher has shown its words; after that it is icons only. */
+const INTRODUCED_KEY = 'cxyz:introduced';
 
 function storage(key: string, value?: string): string | null {
   try {
@@ -224,6 +226,18 @@ export function App({ client, config, bind, onView }: AppProps) {
     return () => clearTimeout(t);
   }, [config.greeting, config.greetingDelay]);
 
+  // The launcher's buttons say what they are once, on a visitor's first visit,
+  // then fold to icons. Hover and keyboard focus unfold them again (CSS).
+  const [labelled, setLabelled] = useState(() => !storage(INTRODUCED_KEY));
+  useEffect(() => {
+    if (!labelled) return;
+    const t = setTimeout(() => {
+      setLabelled(false);
+      storage(INTRODUCED_KEY, '1');
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [labelled]);
+
   // Esc closes.
   useEffect(() => {
     if (view === 'closed') return;
@@ -298,7 +312,6 @@ export function App({ client, config, bind, onView }: AppProps) {
     const inLine = phase === 'queued' || phase === 'ready' || phase === 'live' || phase === 'connecting';
     return (
       <div class="dock" part="launcher">
-        {client.mode === 'test' ? <span class="testmode">TEST</span> : null}
         {greeting ? (
           <div class="greeting" part="greeting" role="status" onClick={() => open()}>
             {config.greeting}
@@ -321,18 +334,36 @@ export function App({ client, config, bind, onView }: AppProps) {
             <Portrait agent={agent} shot={CLOSE_UP} />
           </span>
           <span class="presence__dot" />
+          {client.mode === 'test' ? (
+            <span class="testmode" title="Test mode: this key only works on development sites">
+              TEST
+            </span>
+          ) : null}
         </button>
-        <div class="pill" part="actions">
+        <div class={`acts ${labelled ? 'acts--labelled' : ''}`} part="actions">
           {canChat ? (
-            <button aria-label={`Chat with ${name}`} onClick={() => open('chat')}>
-              <ChatIcon size={18} />
-              <span>Chat</span>
+            <button class="act" aria-label={`Chat with ${name}`} onClick={() => open('chat')}>
+              <ChatIcon size={20} />
+              <span class="act__label" aria-hidden="true">
+                Chat
+              </span>
             </button>
           ) : null}
           {canCall ? (
-            <button class="pill__call" aria-label={inLine ? 'Back to your call' : `Call ${name}`} onClick={() => (inLine ? open('call') : void startCall())}>
-              <PhoneIcon size={18} />
-              <span>{inLine ? (phase === 'queued' ? `${ordinal(state?.position ?? 1)} in line` : 'On call') : 'Call'}</span>
+            <button
+              class={`act act--call ${inLine ? 'act--live' : ''}`}
+              aria-label={inLine ? (phase === 'queued' ? `You are ${ordinal(state?.position ?? 1)} in line. Open your call` : 'Back to your call') : `Call ${name}`}
+              onClick={() => (inLine ? open('call') : void startCall())}
+            >
+              <PhoneIcon size={20} />
+              <span class="act__label" aria-hidden="true">
+                {inLine ? (phase === 'queued' ? `${ordinal(state?.position ?? 1)} in line` : 'On call') : 'Call'}
+              </span>
+              {phase === 'queued' ? (
+                <span class="act__badge" aria-hidden="true">
+                  {state?.position ?? 1}
+                </span>
+              ) : null}
             </button>
           ) : null}
         </div>

@@ -22,6 +22,30 @@ export function inkFor(color: string): string {
   return lum > 0.45 ? '#14121a' : '#ffffff';
 }
 
+/** Relative luminance of a CSS rgb()/rgba() colour, or null when transparent / unreadable. */
+export function luminanceOf(color: string): number | null {
+  const m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\s*\)/.exec(color);
+  if (!m) return null;
+  const alpha = m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]);
+  if (alpha < 0.5) return null;
+  const [r, g, b] = [m[1], m[2], m[3]].map((v) => Number(v) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * `auto` means "look like you belong on THIS page": a dark site gets the dark
+ * widget whatever the visitor's system says. The page's own background
+ * decides; only a transparent one falls back to the system preference.
+ */
+function pageIsDark(mq: MediaQueryList | null): boolean {
+  for (const el of [document.body, document.documentElement]) {
+    if (!el) continue;
+    const lum = luminanceOf(getComputedStyle(el).backgroundColor);
+    if (lum !== null) return lum < 0.22;
+  }
+  return !!mq?.matches;
+}
+
 const ATTRS = ['publishable-key', 'agent', 'api-url', 'position', 'mode', 'accent', 'greeting', 'open'];
 
 /**
@@ -65,7 +89,7 @@ export class CharacterXYZElement extends HTMLElement {
     if (this.stage) render(null, this.stage);
     this.client?.destroy();
     this.client = null;
-    this.mq?.removeEventListener('change', this.onScheme);
+    this.mq?.removeEventListener('change', this.onSchemeChange);
     this.booted = false;
   }
 
@@ -82,8 +106,10 @@ export class CharacterXYZElement extends HTMLElement {
     this.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
   }
 
+  private onSchemeChange = () => requestAnimationFrame(this.onScheme);
+
   private onScheme = () => {
-    if (this.dataset.mode === 'auto') this.dataset.theme = this.mq?.matches ? 'dark' : 'light';
+    if (this.dataset.mode === 'auto') this.dataset.theme = pageIsDark(this.mq) ? 'dark' : 'light';
   };
 
   private async boot() {
@@ -158,8 +184,9 @@ export class CharacterXYZElement extends HTMLElement {
     this.dataset.mode = c.mode;
     if (c.mode === 'auto') {
       this.mq = matchMedia('(prefers-color-scheme: dark)');
-      this.mq.addEventListener('change', this.onScheme);
-      this.dataset.theme = this.mq.matches ? 'dark' : 'light';
+      // A site's own dark mode usually follows the system, so re-read the page then.
+      this.mq.addEventListener('change', this.onSchemeChange);
+      this.dataset.theme = pageIsDark(this.mq) ? 'dark' : 'light';
     } else {
       this.dataset.theme = c.mode;
     }

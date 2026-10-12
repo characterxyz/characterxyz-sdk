@@ -53,7 +53,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 
 /* ------------------------------------------------------------ launcher */
 .dock { display: flex; align-items: flex-end; gap: 10px; }
-:host([data-side="left"]) .dock { flex-direction: row-reverse; }
+/* She sits in the corner and never moves; the buttons grow away from her. */
+:host([data-side="right"]) .dock { flex-direction: row-reverse; }
 .presence {
   position: relative; width: 68px; height: 68px; border-radius: 50%; flex: none;
   transition: transform .5s var(--cx-spring);
@@ -73,24 +74,38 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   position: absolute; right: 3px; bottom: 3px; width: 14px; height: 14px; border-radius: 50%;
   background: var(--cx-ok); box-shadow: 0 0 0 3px var(--cx-solid);
 }
-.pill {
-  display: flex; gap: 4px; padding: 5px; border-radius: 999px;
-  background: var(--cx-bg); backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
-  box-shadow: var(--cx-shadow); border: 1px solid var(--cx-line);
-  margin-bottom: 10px;
+.acts { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+/* Call, the primary action, sits next to her on either side. */
+:host([data-side="left"]) .acts { flex-direction: row-reverse; }
+.act {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  height: 44px; min-width: 44px; padding: 0 12px; border-radius: 999px;
+  color: var(--cx-ink); background: var(--cx-bg);
+  backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid var(--cx-line); box-shadow: var(--cx-shadow);
   animation: cx-rise .6s var(--cx-ease) both;
+  transition: transform .35s var(--cx-spring), background .2s, box-shadow .2s;
 }
-.pill button {
-  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 999px;
+.act + .act { animation-delay: .06s; }
+.act:hover { transform: translateY(-2px); }
+.act:active { transform: scale(.94); }
+.act--call { background: var(--cx-accent); color: var(--cx-accent-ink); border-color: transparent; }
+.act--call:hover { background: color-mix(in oklab, var(--cx-accent) 88%, #000); }
+/* The word folds away to an icon; hover, keyboard focus and a first visit unfold it. */
+.act__label {
+  max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap;
   font-size: 14px; font-weight: 600; letter-spacing: -0.005em;
-  transition: background .2s, transform .3s var(--cx-spring);
+  transition: max-width .35s var(--cx-ease), opacity .2s, margin .35s var(--cx-ease);
 }
-.pill button:hover { background: var(--cx-bubble); }
-.pill button:active { transform: scale(.96); }
-.pill .pill__call { background: var(--cx-accent); color: var(--cx-accent-ink); }
-.pill .pill__call:hover { background: color-mix(in oklab, var(--cx-accent) 88%, #000); }
-.pill--compact button span { display: none; }
-.pill--compact button { padding: 0 11px; }
+.act:hover .act__label, .act:focus-visible .act__label, .acts--labelled .act__label { max-width: 120px; opacity: 1; margin-left: 7px; }
+/* Waiting in line: the place, on the button. */
+.act__badge {
+  position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  display: grid; place-items: center; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--cx-solid); color: var(--cx-ink); box-shadow: 0 0 0 2px var(--cx-accent);
+}
+/* On a call (or ready): the button breathes so the way back is obvious. */
+.act--live::after { content: ""; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid var(--cx-accent); opacity: .5; animation: cx-glow-ring 1.8s ease-out infinite; }
 .greeting {
   position: absolute; bottom: 86px; max-width: 260px; padding: 12px 34px 12px 14px; border-radius: 18px;
   background: var(--cx-solid); box-shadow: var(--cx-shadow); border: 1px solid var(--cx-line);
@@ -226,10 +241,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 
 /* ------------------------------------------------------------ test-mode ribbon */
 .dock { position: relative; }
-/* On the portrait's top edge, clear of the greeting above. */
-.testmode { position: absolute; bottom: 58px; z-index: 1; font-size: 9.5px; font-weight: 800; letter-spacing: .08em; padding: 2px 6px; border-radius: 6px; background: #f59e0b; color: #1c1206; box-shadow: 0 0 0 2px var(--cx-solid); pointer-events: none; }
-:host([data-side="right"]) .testmode { right: auto; left: 2px; }
-:host([data-side="left"]) .testmode { right: 2px; }
+/* A small tag on the portrait's lower edge: present, never in the way. */
+.testmode { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); font-size: 8.5px; font-weight: 800; letter-spacing: .08em; line-height: 1; padding: 3px 5px; border-radius: 5px; background: #f59e0b; color: #1c1206; box-shadow: 0 0 0 2px var(--cx-solid); pointer-events: none; }
 
 /* ------------------------------------------------------------ phones: a bottom sheet */
 @media (max-width: 520px) {
@@ -248,6 +261,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 @keyframes cx-blink { 50% { opacity: 0; } }
 @keyframes cx-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
 @keyframes cx-pulse { 50% { opacity: .35; } }
+@keyframes cx-glow-ring { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.35); opacity: 0; } }
 @keyframes cx-glow { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--cx-accent) 50%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
 
 @media (prefers-reduced-motion: reduce) {

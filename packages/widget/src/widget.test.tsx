@@ -153,7 +153,7 @@ describe('<character-xyz>', () => {
     await vi.waitFor(() => expect(ready).toHaveBeenCalled(), { timeout: 3000 });
     const root = w.element.shadowRoot!;
     expect(root.querySelector('.presence')?.getAttribute('aria-label')).toBe('Open Ananya');
-    expect(root.querySelector('.pill__call')).not.toBeNull();
+    expect(root.querySelector('.act--call')).not.toBeNull();
     expect(w.element.style.getPropertyValue('--cx-accent')).toBe('#e11d48');
     expect(w.element.dataset.side).toBe('right');
   });
@@ -182,6 +182,17 @@ describe('<character-xyz>', () => {
     expect(w.element.style.display).toBe('none');
     expect(w.element.shadowRoot!.querySelector('.presence')).toBeNull();
     warn.mockRestore();
+  });
+});
+
+describe('page colour', () => {
+  it('reads a page background as light, dark, or unknown', async () => {
+    const { luminanceOf } = await import('./element.js');
+    expect(luminanceOf('rgb(255, 255, 255)')).toBeCloseTo(1, 3);
+    expect(luminanceOf('rgb(17, 16, 22)')!).toBeLessThan(0.22);
+    expect(luminanceOf('rgba(0, 0, 0, 0)')).toBeNull();
+    expect(luminanceOf('transparent')).toBeNull();
+    expect(luminanceOf('rgb(247 245 242)')!).toBeGreaterThan(0.8);
   });
 });
 

@@ -4,7 +4,10 @@
   "description": "Character XYZ in any site: the agent in the corner with chat and voice calls. One script tag, or a Web Component.",
   "license": "UNLICENSED",
   "type": "module",
-  "sideEffects": ["./dist/index.js", "./dist/cx.js"],
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/cx.js"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,16 +19,31 @@
     "./cx.js": "./dist/cx.js",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@characterxyz/web": "workspace:*"
+    "@characterxyz/web": "workspace:^"
   },
   "devDependencies": {
     "preact": "^10.29.8"
-  }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/characterxyz/characterxyz-sdk.git",
+    "directory": "packages/widget"
+  },
+  "homepage": "https://character.xyz",
+  "unpkg": "./dist/cx.js",
+  "jsdelivr": "./dist/cx.js"
 }

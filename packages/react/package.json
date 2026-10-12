@@ -28,13 +28,23 @@
     "react": ">=17"
   },
   "dependencies": {
-    "@characterxyz/web": "workspace:*",
-    "@characterxyz/widget": "workspace:*"
+    "@characterxyz/web": "workspace:^",
+    "@characterxyz/widget": "workspace:^"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
-  }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/characterxyz/characterxyz-sdk.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://character.xyz"
 }

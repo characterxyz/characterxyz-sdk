@@ -29,10 +29,10 @@ importers:
   packages/react:
     dependencies:
       '@characterxyz/web':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../web
       '@characterxyz/widget':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../widget
     devDependencies:
       '@types/react':
@@ -53,7 +53,7 @@ importers:
   packages/widget:
     dependencies:
       '@characterxyz/web':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../web
     devDependencies:
       preact:

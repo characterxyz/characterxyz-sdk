@@ -3,7 +3,7 @@
  * from its own `data-*` attributes and mounts itself:
  *
  * ```html
- * <script src="https://cdn.character.xyz/sdk/v1/cx.js"
+ * <script src="https://unpkg.com/@characterxyz/widget@0/dist/cx.js"
  *         data-key="cxyz_pk_live_…" data-accent="#e11d48" async></script>
  * ```
  *

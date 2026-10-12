@@ -4,7 +4,7 @@ Put a Character XYZ agent on any website or app: the character in the corner, te
 streams, and real-time voice calls with a fair queue when every line is busy.
 
 ```html
-<script src="https://cdn.character.xyz/sdk/v1/cx.js" data-key="cxyz_pk_live_…" async></script>
+<script src="https://unpkg.com/@characterxyz/widget@0/dist/cx.js" data-key="cxyz_pk_live_…" async></script>
 ```
 
 That is the whole integration for most sites. Create the key, choose the sites it may run on and

@@ -16,7 +16,7 @@
  *
  * Or as an element: `<character-xyz publishable-key="cxyz_pk_live_…"></character-xyz>`
  * after `import '@characterxyz/widget'`. Or with no build at all:
- * `<script src="https://cdn.character.xyz/sdk/v1/cx.js" data-key="cxyz_pk_live_…" async></script>`.
+ * `<script src="https://unpkg.com/@characterxyz/widget@0/dist/cx.js" data-key="cxyz_pk_live_…" async></script>`.
  */
 import { define } from './element.js';
 

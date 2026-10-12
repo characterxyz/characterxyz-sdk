@@ -328,7 +328,20 @@ export function App({ client, config, bind, onView }: AppProps) {
             </button>
           </div>
         ) : null}
-        <button class="presence" part="presence" aria-label={`Open ${name}`} onClick={() => open(inLine ? 'call' : undefined)}>
+        <button
+          class={`presence ${inLine ? 'presence--live' : ''}`}
+          part="presence"
+          aria-label={
+            inLine
+              ? phase === 'queued'
+                ? `You are ${ordinal(state?.position ?? 1)} in line to call ${name}. Open`
+                : `Back to your call with ${name}`
+              : canChat
+                ? `Chat with ${name}`
+                : `Call ${name}`
+          }
+          onClick={() => open(inLine || !canChat ? 'call' : 'chat')}
+        >
           <span class="presence__ring" />
           <span class="presence__face">
             <Portrait agent={agent} shot={CLOSE_UP} />
@@ -339,7 +352,18 @@ export function App({ client, config, bind, onView }: AppProps) {
               TEST
             </span>
           ) : null}
+          {phase === 'queued' ? (
+            <span class="presence__badge" aria-hidden="true">
+              {state?.position ?? 1}
+            </span>
+          ) : null}
+          {config.launcher === 'bubble' && !greeting ? (
+            <span class="presence__label" aria-hidden="true">
+              {inLine ? (phase === 'queued' ? `${ordinal(state?.position ?? 1)} in line` : 'Back to your call') : canChat ? `Chat with ${name}` : `Call ${name}`}
+            </span>
+          ) : null}
         </button>
+        {config.launcher === 'bubble' ? null : (
         <div class={`acts ${labelled ? 'acts--labelled' : ''}`} part="actions">
           {canChat ? (
             <button class="act" aria-label={`Chat with ${name}`} onClick={() => open('chat')}>
@@ -367,6 +391,7 @@ export function App({ client, config, bind, onView }: AppProps) {
             </button>
           ) : null}
         </div>
+        )}
       </div>
     );
   }
@@ -437,6 +462,11 @@ export function App({ client, config, bind, onView }: AppProps) {
               </div>
               <div class="empty__title">Hi, I'm {name}</div>
               <div class="empty__body">{subtitle ? `${subtitle}. ` : ''}Ask me anything{canCall ? ', or call me to talk' : ''}.</div>
+              {canCall ? (
+                <button class="btn btn--accent empty__call" onClick={() => (call && phase !== 'ended' ? setView('call') : void startCall())}>
+                  <PhoneIcon size={17} /> Call {name}
+                </button>
+              ) : null}
               {config.suggestions.length ? (
                 <div class="chips">
                   {config.suggestions.map((s) => (

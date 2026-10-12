@@ -56,10 +56,29 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 /* She sits in the corner and never moves; the buttons grow away from her. */
 :host([data-side="right"]) .dock { flex-direction: row-reverse; }
 .presence {
-  position: relative; width: 68px; height: 68px; border-radius: 50%; flex: none;
+  position: relative; width: 60px; height: 60px; border-radius: 50%; flex: none;
   transition: transform .5s var(--cx-spring);
 }
-.presence:hover { transform: translateY(-2px) scale(1.04); }
+.presence:hover { transform: translateY(-2px) scale(1.05); }
+/* What a tap does, on hover and keyboard focus. */
+.presence__label {
+  position: absolute; top: 50%; transform: translate(6px, -50%); opacity: 0; pointer-events: none; white-space: nowrap;
+  padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; letter-spacing: -0.005em;
+  color: var(--cx-ink); background: var(--cx-solid); border: 1px solid var(--cx-line); box-shadow: var(--cx-shadow);
+  transition: opacity .2s, transform .3s var(--cx-ease);
+}
+:host([data-side="right"]) .presence__label { right: calc(100% + 10px); }
+:host([data-side="left"]) .presence__label { left: calc(100% + 10px); transform: translate(-6px, -50%); }
+.presence:hover .presence__label, .presence:focus-visible .presence__label { opacity: 1; transform: translate(0, -50%); }
+/* Waiting in line: the place, on her. */
+.presence__badge {
+  position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--cx-accent); color: var(--cx-accent-ink); box-shadow: 0 0 0 2px var(--cx-solid);
+}
+/* A call is open (or waiting): she breathes, so the way back is obvious. */
+.presence--live::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--cx-accent); animation: cx-glow-ring 1.8s ease-out infinite; }
+.empty__call { margin-top: 4px; height: 40px; }
 .presence__ring {
   position: absolute; inset: -3px; border-radius: 50%;
   background: conic-gradient(from var(--cx-angle, 0deg), var(--cx-accent), color-mix(in oklab, var(--cx-accent) 30%, #fff), var(--cx-accent));
@@ -107,7 +126,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 /* On a call (or ready): the button breathes so the way back is obvious. */
 .act--live::after { content: ""; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid var(--cx-accent); opacity: .5; animation: cx-glow-ring 1.8s ease-out infinite; }
 .greeting {
-  position: absolute; bottom: 86px; max-width: 260px; padding: 12px 34px 12px 14px; border-radius: 18px;
+  position: absolute; bottom: 76px; max-width: 260px; padding: 12px 34px 12px 14px; border-radius: 18px;
   background: var(--cx-solid); box-shadow: var(--cx-shadow); border: 1px solid var(--cx-line);
   font-size: 14px; color: var(--cx-ink); animation: cx-pop .55s var(--cx-spring) both; cursor: pointer;
 }
@@ -248,7 +267,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 @media (max-width: 520px) {
   :host([data-open]) { left: 0 !important; right: 0 !important; bottom: 0 !important; }
   .panel { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: min(92dvh, 760px); border-radius: var(--cx-radius) var(--cx-radius) 0 0; padding-bottom: env(safe-area-inset-bottom); animation-name: cx-sheet; }
-  .presence { width: 60px; height: 60px; }
+  .presence { width: 56px; height: 56px; }
 }
 
 @keyframes cx-spin { to { transform: rotate(360deg); } }

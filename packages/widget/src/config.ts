@@ -7,10 +7,13 @@
 
 export type Position = 'bottom-right' | 'bottom-left';
 export type ColorMode = 'light' | 'dark' | 'auto';
+/** `bubble`: just her portrait (opens the chat; calls are inside). `actions`: chat and call buttons beside it. */
+export type LauncherStyle = 'bubble' | 'actions';
 
 export interface WidgetConfig {
   position: Position;
   mode: ColorMode;
+  launcher: LauncherStyle;
   /** Any CSS colour. */
   accent: string;
   /** Corner radius of the panel, px. */
@@ -42,6 +45,7 @@ export interface WidgetConfig {
 export const DEFAULTS: WidgetConfig = {
   position: 'bottom-right',
   mode: 'auto',
+  launcher: 'bubble',
   accent: '#7c5cff',
   radius: 24,
   font: '',
@@ -96,6 +100,7 @@ export function applyLayer(base: WidgetConfig, raw: Record<string, unknown> | nu
   const c = { ...base };
   if (raw.position === 'bottom-left' || raw.position === 'bottom-right') c.position = raw.position;
   if (raw.mode === 'light' || raw.mode === 'dark' || raw.mode === 'auto') c.mode = raw.mode;
+  if (raw.launcher === 'bubble' || raw.launcher === 'actions') c.launcher = raw.launcher;
   c.accent = safeColor(raw.accent) ?? c.accent;
   c.radius = num(raw.radius, 0, 40) ?? c.radius;
   c.font = safeFont(raw.font) ?? c.font;

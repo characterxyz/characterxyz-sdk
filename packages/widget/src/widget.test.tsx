@@ -152,10 +152,26 @@ describe('<character-xyz>', () => {
     const w = mount({ publishableKey: 'cxyz_pk_live_AAAAAAAAAAAAAAAAAAAAAAAA' });
     await vi.waitFor(() => expect(ready).toHaveBeenCalled(), { timeout: 3000 });
     const root = w.element.shadowRoot!;
-    expect(root.querySelector('.presence')?.getAttribute('aria-label')).toBe('Open Ananya');
-    expect(root.querySelector('.act--call')).not.toBeNull();
+    // The default launcher is just her: a tap opens the chat, calls are inside.
+    expect(root.querySelector('.presence')?.getAttribute('aria-label')).toBe('Chat with Ananya');
+    expect(root.querySelector('.acts')).toBeNull();
     expect(w.element.style.getPropertyValue('--cx-accent')).toBe('#e11d48');
     expect(w.element.dataset.side).toBe('right');
+  });
+
+  it('the opt-in launcher puts chat and call buttons beside her', async () => {
+    const { mount } = await import('./element.js');
+    const w = mount({ publishableKey: 'cxyz_pk_live_AAAAAAAAAAAAAAAAAAAAAAAA', launcher: 'actions' });
+    await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.act--call')).not.toBeNull(), { timeout: 3000 });
+  });
+
+  it('a tap on her opens the chat, and the empty chat offers the call', async () => {
+    const { mount } = await import('./element.js');
+    const w = mount({ publishableKey: 'cxyz_pk_live_AAAAAAAAAAAAAAAAAAAAAAAA' });
+    await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.presence')).not.toBeNull(), { timeout: 3000 });
+    (w.element.shadowRoot!.querySelector('.presence') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.panel')).not.toBeNull());
+    expect(w.element.shadowRoot!.querySelector('.empty__call')?.textContent).toContain('Call Ananya');
   });
 
   it('opens the chat panel with an empty-state greeting', async () => {

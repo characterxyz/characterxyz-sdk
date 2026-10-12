@@ -58,6 +58,23 @@ export interface ChatMessage {
   failed?: boolean;
   /** Why, in words a visitor can read (a daily limit, a slow-down). */
   error?: string;
+  /** On a reply just written: what the visitor might ask next. Not kept in the history. */
+  suggestions?: string[];
+}
+
+/**
+ * How the agent opens the conversation on this site, written by the agent
+ * from her own persona and knowledge (and the key's product).
+ */
+export interface Opening {
+  /** Her first message in an empty chat. */
+  greeting: string;
+  /** One line for a visitor coming back to an earlier conversation. */
+  welcomeBack: string;
+  /** A few words to show beside the closed launcher. May be empty. */
+  teaser: string;
+  /** What a visitor would most likely ask first. May be empty. */
+  suggestions: string[];
 }
 
 export type CallPhase =

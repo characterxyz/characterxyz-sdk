@@ -122,6 +122,12 @@ const fakeClient = vi.hoisted(() => ({
   call: null,
   chat: { messages: [], isBusy: false, on: () => () => {}, load: async () => [], send: async () => ({}), stop() {}, clear() {} },
   on: () => () => {},
+  opening: async () => ({
+    greeting: 'Hi! I help with Traction. What are you working on?',
+    welcomeBack: 'Good to see you again!',
+    teaser: 'Need a hand with your pipeline?',
+    suggestions: ['How does event mode work?', 'What is the follow-up cadence?'],
+  }),
   destroy: vi.fn(),
 }));
 
@@ -171,7 +177,18 @@ describe('<character-xyz>', () => {
     await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.presence')).not.toBeNull(), { timeout: 3000 });
     (w.element.shadowRoot!.querySelector('.presence') as HTMLButtonElement).click();
     await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.panel')).not.toBeNull());
-    expect(w.element.shadowRoot!.querySelector('.empty__call')?.textContent).toContain('Call Ananya');
+    // Her own first message, after a typing beat, then her questions and the call.
+    await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.chip--call')?.textContent).toContain('Call Ananya'), { timeout: 3000 });
+    const root = w.element.shadowRoot!;
+    expect(root.querySelector('.msg--agent')?.textContent).toContain('What are you working on?');
+    expect([...root.querySelectorAll('.chip')].map((c) => c.textContent)).toContain('How does event mode work?');
+  });
+
+  it("shows her teaser beside the launcher once, from the agent's own opening", async () => {
+    localStorage.clear();
+    const { mount } = await import('./element.js');
+    const w = mount({ publishableKey: 'cxyz_pk_live_AAAAAAAAAAAAAAAAAAAAAAAA', greetingDelay: 0 });
+    await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.greeting')?.textContent).toContain('Need a hand with your pipeline?'), { timeout: 3000 });
   });
 
   it('opens the chat panel with an empty-state greeting', async () => {
@@ -181,8 +198,10 @@ describe('<character-xyz>', () => {
     w.open('chat');
     await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.panel')).not.toBeNull());
     const root = w.element.shadowRoot!;
-    expect(root.querySelector('.empty__title')?.textContent).toBe("Hi, I'm Ananya");
-    expect(root.querySelector('.chip')?.textContent).toContain('What do you do?');
+    expect(root.querySelector('.empty__title')?.textContent).toBe('Ananya');
+    // A brand's own suggestions win over hers.
+    await vi.waitFor(() => expect(root.querySelector('.chip')?.textContent).toContain('What do you do?'), { timeout: 3000 });
+    expect([...root.querySelectorAll('.chip')].map((c) => c.textContent)).not.toContain('How does event mode work?');
     expect(w.element.hasAttribute('data-open')).toBe(true);
   });
 

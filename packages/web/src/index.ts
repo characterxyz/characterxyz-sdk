@@ -31,6 +31,7 @@ export type {
   Caption,
   ChatMessage,
   Features,
+  Opening,
   SessionInfo,
   VideoCharacter,
   VideoClip,

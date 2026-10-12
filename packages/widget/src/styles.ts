@@ -146,7 +146,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 /* On a call (or ready): the button breathes so the way back is obvious. */
 .act--live::after { content: ""; position: absolute; inset: -4px; border-radius: inherit; border: 2px solid var(--cx-accent); opacity: .5; animation: cx-glow-ring 1.8s ease-out infinite; }
 .greeting {
-  position: absolute; bottom: 76px; max-width: 260px; padding: 12px 34px 12px 14px; border-radius: 18px;
+  position: absolute; bottom: 76px; width: max-content; max-width: 260px; padding: 12px 34px 12px 14px; border-radius: 18px;
   background: var(--cx-solid); box-shadow: var(--cx-shadow); border: 1px solid var(--cx-line);
   font-size: 14px; color: var(--cx-ink); animation: cx-pop .55s var(--cx-spring) both; cursor: pointer;
 }
@@ -208,6 +208,9 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; font-size: 13px; border: 1px solid var(--cx-line); background: var(--cx-solid); transition: border-color .2s, transform .3s var(--cx-spring); }
 .chip:hover { border-color: color-mix(in oklab, var(--cx-accent) 55%, transparent); transform: translateY(-1px); }
 .chip svg { color: var(--cx-accent); }
+/* Quick replies sit under her message, on her side, and arrive just after it. */
+.chips--start { justify-content: flex-start; margin: 2px 0 4px; animation: cx-rise .4s var(--cx-ease) .12s both; }
+.chip--call { color: var(--cx-accent); border-color: color-mix(in oklab, var(--cx-accent) 45%, transparent); font-weight: 600; }
 
 .compose { padding: 10px 12px 12px; }
 .compose__box { display: flex; align-items: flex-end; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 20px; background: var(--cx-solid); border: 1px solid var(--cx-line); transition: border-color .2s, box-shadow .2s; }

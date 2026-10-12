@@ -1,11 +1,11 @@
-import type { Call, CallState, Caption, CharacterXYZ, ChatMessage } from '@characterxyz/web';
-import { Fragment } from 'preact';
+import type { Call, CallState, Caption, CharacterXYZ, ChatMessage, Opening } from '@characterxyz/web';
+import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 import type { WidgetConfig } from './config.js';
 import { blocks, clock, endCopy, eta, ordinal, type Inline } from './format.js';
 import { CLOSE_UP, FULL_BODY, HALF_BODY, MEDIUM } from './framing.js';
-import { BackIcon, ChatIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, PhoneIcon, RetryIcon, SendIcon, SparkIcon } from './icons.js';
+import { BackIcon, ChatIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, PhoneIcon, RetryIcon, SendIcon } from './icons.js';
 import { faceEmotion, FaceFrame, type FaceStatus } from './face-frame.js';
 import { Portrait } from './portrait.js';
 
@@ -149,6 +149,21 @@ function Text({ parts }: { parts: Inline[] }) {
   );
 }
 
+/** Tappable questions under her message: what to ask first, or next. */
+function QuickReplies({ items, onPick, children }: { items: readonly string[]; onPick: (q: string) => void; children?: ComponentChildren }) {
+  if (!items.length && !children) return null;
+  return (
+    <div class="chips chips--start" part="suggestions">
+      {items.map((q) => (
+        <button class="chip" key={q} onClick={() => onPick(q)}>
+          {q}
+        </button>
+      ))}
+      {children}
+    </div>
+  );
+}
+
 function Rich({ text }: { text: string }) {
   return (
     <Fragment>
@@ -188,6 +203,28 @@ export function App({ client, config, bind, onView }: AppProps) {
   const subtitle = config.subtitle ?? agent.tagline;
   const name = agent.name || 'Assistant';
 
+  // HOW SHE OPENS is hers: written by the agent from her persona and the
+  // key's product knowledge (server-cached), fetched once per page so the
+  // teaser and her first message are ready before anyone clicks. A brand's own
+  // `greeting` / `suggestions` still win.
+  const [opening, setOpening] = useState<Opening | null>(null);
+  useEffect(() => {
+    if (!canChat) return;
+    let live = true;
+    void client.opening().then((o) => live && setOpening(o));
+    return () => {
+      live = false;
+    };
+  }, [client, canChat]);
+  const teaser = config.greeting || opening?.teaser || '';
+  const starters = config.suggestions.length ? config.suggestions : (opening?.suggestions ?? []);
+  const firstLine = opening?.greeting || `Hi, I'm ${name}. How can I help you today?`;
+
+  // Her first message waits for the history (a returning visitor has one) and
+  // then for a short typing beat, so it arrives like a message, not a label.
+  const [history, setHistory] = useState<'loading' | 'empty' | number>('loading');
+  const [greeted, setGreeted] = useState(false);
+
   const setView = useCallback(
     (v: View) => {
       setViewRaw(v);
@@ -204,28 +241,44 @@ export function App({ client, config, bind, onView }: AppProps) {
     }, 200);
   }, [setView]);
 
+  const loadHistory = useCallback(async () => {
+    try {
+      const list = await client.chat.load();
+      setHistory((h) => (h === 'loading' ? (list.length ? list.length : 'empty') : h));
+    } catch {
+      setHistory((h) => (h === 'loading' ? 'empty' : h));
+    }
+  }, [client]);
+
   const open = useCallback(
     (v: Exclude<View, 'closed'> = canChat ? 'chat' : 'call') => {
       setGreeting(false);
       storage(GREETED_KEY, '1');
       setView(v);
-      if (v === 'chat') void client.chat.load().catch(() => {});
+      if (v === 'chat') void loadHistory();
     },
-    [canChat, client, setView],
+    [canChat, setView, loadHistory],
   );
+
 
   useEffect(() => bind({ open, close }), [bind, open, close]);
 
   useEffect(() => {
-    if (config.open && canChat) void client.chat.load().catch(() => {});
-  }, [client, config.open, canChat]);
+    if (config.open && canChat) void loadHistory();
+  }, [loadHistory, config.open, canChat]);
 
-  // The greeting: once per visitor, after a beat, never over an open panel.
+  // The teaser: once per visitor, after a beat, never over an open panel.
   useEffect(() => {
-    if (!config.greeting || storage(GREETED_KEY)) return;
+    if (!teaser || storage(GREETED_KEY)) return;
     const t = setTimeout(() => setGreeting(true), config.greetingDelay * 1000);
     return () => clearTimeout(t);
-  }, [config.greeting, config.greetingDelay]);
+  }, [teaser, config.greetingDelay]);
+
+  useEffect(() => {
+    if (view !== 'chat' || greeted || history === 'loading') return;
+    const t = setTimeout(() => setGreeted(true), 700);
+    return () => clearTimeout(t);
+  }, [view, greeted, history]);
 
   // The launcher's buttons say what they are once, on a visitor's first visit,
   // then fold to icons. Hover and keyboard focus unfold them again (CSS).
@@ -325,7 +378,7 @@ export function App({ client, config, bind, onView }: AppProps) {
       <div class={`dock dock--${config.display}`} part="launcher">
         {greeting ? (
           <div class="greeting" part="greeting" role="status" onClick={() => open()}>
-            {config.greeting}
+            {teaser}
             <button
               class="greeting__close"
               aria-label="Dismiss"
@@ -467,28 +520,35 @@ export function App({ client, config, bind, onView }: AppProps) {
         ) : null}
         <div class="log" ref={log} role="log" aria-live="polite" aria-relevant="additions">
           {messages.length === 0 ? (
-            <div class="empty">
-              <div class="empty__face">
-                <Portrait agent={agent} shot={CLOSE_UP} />
-              </div>
-              <div class="empty__title">Hi, I'm {name}</div>
-              <div class="empty__body">{subtitle ? `${subtitle}. ` : ''}Ask me anything{canCall ? ', or call me to talk' : ''}.</div>
-              {canCall ? (
-                <button class="btn btn--accent empty__call" onClick={() => (call && phase !== 'ended' ? setView('call') : void startCall())}>
-                  <PhoneIcon size={17} /> Call {name}
-                </button>
-              ) : null}
-              {config.suggestions.length ? (
-                <div class="chips">
-                  {config.suggestions.map((s) => (
-                    <button class="chip" key={s} onClick={() => void sendText(s)}>
-                      <SparkIcon />
-                      {s}
-                    </button>
-                  ))}
+            <Fragment>
+              <div class="empty">
+                <div class="empty__face">
+                  <Portrait agent={agent} shot={CLOSE_UP} />
                 </div>
-              ) : null}
-            </div>
+                <div class="empty__title">{name}</div>
+                {subtitle ? <div class="empty__body">{subtitle}</div> : null}
+              </div>
+              {history === 'loading' ? null : !greeted ? (
+                <div class="msg msg--agent typing" aria-label={`${name} is typing`}>
+                  <i />
+                  <i />
+                  <i />
+                </div>
+              ) : (
+                <Fragment>
+                  <div class="msg msg--agent" part="message message-agent">
+                    <Rich text={firstLine} />
+                  </div>
+                  <QuickReplies items={starters} onPick={(q) => void sendText(q)}>
+                    {canCall ? (
+                      <button class="chip chip--call" onClick={() => (call && phase !== 'ended' ? setView('call') : void startCall())}>
+                        <PhoneIcon size={14} /> Call {name}
+                      </button>
+                    ) : null}
+                  </QuickReplies>
+                </Fragment>
+              )}
+            </Fragment>
           ) : null}
           {messages.map((m) =>
             m.role === 'agent' && m.streaming && !m.text ? (
@@ -502,6 +562,9 @@ export function App({ client, config, bind, onView }: AppProps) {
                 <div class={`msg msg--${m.role} ${m.failed ? 'msg--failed' : ''} ${m.streaming ? 'caret' : ''}`} part={`message message-${m.role}`}>
                   {m.role === 'agent' ? <Rich text={m.text} /> : m.text}
                 </div>
+                {m === messages[messages.length - 1] && m.role === 'agent' && !m.streaming && !busy && m.suggestions?.length ? (
+                  <QuickReplies items={m.suggestions} onPick={(q) => void sendText(q)} />
+                ) : null}
                 {m.failed && m.error ? (
                   <div class="msg__why" role="status">
                     {m.error}
@@ -514,6 +577,16 @@ export function App({ client, config, bind, onView }: AppProps) {
               </Fragment>
             ),
           )}
+          {/* A visitor back to an earlier conversation: a word from her, and
+              where to start — until they say something. */}
+          {typeof history === 'number' && messages.length === history && opening?.welcomeBack ? (
+            <Fragment>
+              <div class="msg msg--agent" part="message message-agent">
+                {opening.welcomeBack}
+              </div>
+              <QuickReplies items={starters} onPick={(q) => void sendText(q)} />
+            </Fragment>
+          ) : null}
         </div>
         <form
           class="compose"

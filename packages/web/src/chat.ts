@@ -86,7 +86,14 @@ export class Chat extends Emitter<ChatEvents> {
             reply.text += d.text;
             this.publish();
           } else if (event === 'done') {
-            finished = { id: String(d.id), role: 'agent', text: String(d.text ?? reply.text), createdAt: String(d.createdAt ?? reply.createdAt) };
+            const next = Array.isArray(d.suggestions) ? d.suggestions.filter((q): q is string => typeof q === 'string' && q.trim() !== '') : [];
+            finished = {
+              id: String(d.id),
+              role: 'agent',
+              text: String(d.text ?? reply.text),
+              createdAt: String(d.createdAt ?? reply.createdAt),
+              ...(next.length ? { suggestions: next } : {}),
+            };
           } else if (event === 'error') {
             failure = typeof d?.message === 'string' ? d.message : 'Something went wrong.';
           }

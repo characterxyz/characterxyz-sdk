@@ -4,7 +4,7 @@ import { Emitter } from './emitter.js';
 import { CxError } from './errors.js';
 import { request } from './http.js';
 import { localStore, memoryStore, SessionManager, type VisitorStore } from './session.js';
-import type { AgentCard, Features, SessionInfo } from './types.js';
+import type { AgentCard, Features, Opening, SessionInfo } from './types.js';
 
 export const DEFAULT_API_URL = 'https://api.character.xyz';
 
@@ -94,6 +94,21 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
   async videoAvatar(): Promise<Record<string, unknown> | null> {
     const token = await this.session.token();
     return request<Record<string, unknown> | null>(this.apiUrl, '/sdk/v1/agent/video-avatar', { token });
+  }
+
+  private openingP: Promise<Opening | null> | null = null;
+
+  /**
+   * How the agent opens the conversation here — her greeting, a welcome-back
+   * line, a teaser and likely first questions — written by her and cached by
+   * the server. Fetched once per page; null if it could not be had.
+   */
+  opening(): Promise<Opening | null> {
+    this.openingP ??= this.session
+      .token()
+      .then((token) => request<Opening>(this.apiUrl, '/sdk/v1/agent/opening', { token }))
+      .catch(() => null);
+    return this.openingP;
   }
 
   /** Start a voice call. Call from a click: it needs the microphone and audio unlocked. */

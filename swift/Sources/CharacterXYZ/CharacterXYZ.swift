@@ -8,7 +8,7 @@ import Foundation
 /// view. Native apps have no Origin, so production apps mint sessions on their
 /// own server with a secret key and pass the token in (`init(sessionToken:)`).
 public enum CharacterXYZVersion {
-    public static let current = "0.1.0"
+    public static let current = "0.1.1"
 }
 
 public struct AgentCard: Decodable, Sendable {

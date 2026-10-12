@@ -60,6 +60,26 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   transition: transform .5s var(--cx-spring);
 }
 .presence:hover { transform: translateY(-2px) scale(1.05); }
+/* ---- display: half body — her cut-out from the waist up, no frame, fading out at the waist */
+.presence--half { width: 128px; height: 170px; border-radius: 0; filter: drop-shadow(0 10px 18px rgba(15, 10, 30, 0.28)); }
+.presence--half .presence__face { border-radius: 0; background: none; box-shadow: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 98%); mask-image: linear-gradient(to bottom, #000 70%, transparent 98%); }
+/* ---- display: full body — she stands in the corner, feet on the edge, a soft shadow under her */
+.presence--full { width: 132px; height: 300px; border-radius: 0; filter: drop-shadow(0 6px 14px rgba(15, 10, 30, 0.22)); }
+.presence--full .presence__face { border-radius: 0; background: none; box-shadow: none; }
+.presence--full::before { content: ""; position: absolute; left: 22%; right: 22%; bottom: -4px; height: 10px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(15, 10, 30, 0.35), transparent); }
+.presence--half:hover, .presence--full:hover { transform: translateY(-3px); }
+.presence--half .presence__dot { top: 10px; bottom: auto; right: 26px; }
+.presence--full .presence__dot { top: 6px; bottom: auto; right: 34px; }
+.presence--half .testmode, .presence--full .testmode { top: -6px; bottom: auto; }
+.presence--full .presence__label { top: 22%; }
+.presence--half .presence__badge, .presence--full .presence__badge { top: 0; right: 4px; }
+.presence--half.presence--live::after, .presence--full.presence--live::after { display: none; }
+.presence--half.presence--live, .presence--full.presence--live { animation: cx-figure-glow 1.8s ease-in-out infinite; }
+.dock--half .greeting { bottom: 186px; }
+.dock--full .greeting { bottom: 316px; }
+
 /* What a tap does, on hover and keyboard focus. */
 .presence__label {
   position: absolute; top: 50%; transform: translate(6px, -50%); opacity: 0; pointer-events: none; white-space: nowrap;
@@ -276,6 +296,10 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   :host([data-open]) { left: 0 !important; right: 0 !important; bottom: 0 !important; }
   .panel { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: min(92dvh, 760px); border-radius: var(--cx-radius) var(--cx-radius) 0 0; padding-bottom: env(safe-area-inset-bottom); animation-name: cx-sheet; }
   .presence { width: 56px; height: 56px; }
+  .presence--half { width: 104px; height: 138px; }
+  .presence--full { width: 100px; height: 228px; }
+  .dock--half .greeting { bottom: 152px; }
+  .dock--full .greeting { bottom: 242px; }
 }
 
 @keyframes cx-spin { to { transform: rotate(360deg); } }
@@ -288,6 +312,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 @keyframes cx-blink { 50% { opacity: 0; } }
 @keyframes cx-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
 @keyframes cx-pulse { 50% { opacity: .35; } }
+@keyframes cx-figure-glow { 0%, 100% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 12px var(--cx-accent)); } }
 @keyframes cx-glow-ring { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.35); opacity: 0; } }
 @keyframes cx-glow { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--cx-accent) 50%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
 

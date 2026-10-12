@@ -27,17 +27,24 @@ export function faceOf(video: VideoCharacter | null, anchorW: number, anchorH: n
   return { cx: ex / anchorW, cy: (ey + chin.y) / 2 / anchorH, span };
 }
 
-export interface Shot {
-  /** Eyes-to-chin as a fraction of the box height. */
-  faceFraction: number;
-  /** Where the face centre lands in the box, 0..1. */
-  at: { x: number; y: number };
-}
+export type Shot =
+  | {
+      /** Eyes-to-chin as a fraction of the box height. */
+      faceFraction: number;
+      /** Where the face centre lands in the box, 0..1. */
+      at: { x: number; y: number };
+    }
+  /** The whole clip, its height filling the box, centred on her face — standing. */
+  | { fit: 'height' };
 
 /** The corner portrait: a close-up. */
-export const CLOSE_UP: Shot = { faceFraction: 0.26, at: { x: 0.5, y: 0.5 } };
+export const CLOSE_UP = { faceFraction: 0.26, at: { x: 0.5, y: 0.5 } } satisfies Shot;
 /** The call card: head and shoulders with room above. */
-export const MEDIUM: Shot = { faceFraction: 0.14, at: { x: 0.5, y: 0.34 } };
+export const MEDIUM = { faceFraction: 0.14, at: { x: 0.5, y: 0.34 } } satisfies Shot;
+/** The launcher's half body: head to waist, her face high in the frame. */
+export const HALF_BODY = { faceFraction: 0.16, at: { x: 0.5, y: 0.22 } } satisfies Shot;
+/** The launcher's full body: the whole figure, standing on the box's bottom edge. */
+export const FULL_BODY = { fit: 'height' } satisfies Shot;
 
 export interface Placement {
   width: number;
@@ -48,6 +55,10 @@ export interface Placement {
 
 /** Pixel placement of the media inside a `boxW`×`boxH` box. */
 export function place(face: Face, mediaAspect: number, boxW: number, boxH: number, shot: Shot): Placement {
+  if ('fit' in shot) {
+    const width = boxH * mediaAspect;
+    return { width, height: boxH, left: boxW / 2 - face.cx * width, top: 0 };
+  }
   const height = (boxH * shot.faceFraction) / face.span;
   const width = height * mediaAspect;
   return {

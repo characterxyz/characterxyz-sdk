@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 import type { WidgetConfig } from './config.js';
 import { blocks, clock, endCopy, eta, ordinal, type Inline } from './format.js';
-import { CLOSE_UP, MEDIUM } from './framing.js';
+import { CLOSE_UP, FULL_BODY, HALF_BODY, MEDIUM } from './framing.js';
 import { BackIcon, ChatIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, PhoneIcon, RetryIcon, SendIcon, SparkIcon } from './icons.js';
 import { faceEmotion, FaceFrame, type FaceStatus } from './face-frame.js';
 import { Portrait } from './portrait.js';
@@ -322,7 +322,7 @@ export function App({ client, config, bind, onView }: AppProps) {
   if (view === 'closed') {
     const inLine = phase === 'queued' || phase === 'ready' || phase === 'live' || phase === 'connecting';
     return (
-      <div class="dock" part="launcher">
+      <div class={`dock dock--${config.display}`} part="launcher">
         {greeting ? (
           <div class="greeting" part="greeting" role="status" onClick={() => open()}>
             {config.greeting}
@@ -340,7 +340,7 @@ export function App({ client, config, bind, onView }: AppProps) {
           </div>
         ) : null}
         <button
-          class={`presence ${inLine ? 'presence--live' : ''}`}
+          class={`presence presence--${config.display} ${inLine ? 'presence--live' : ''}`}
           part="presence"
           aria-label={
             inLine
@@ -353,9 +353,9 @@ export function App({ client, config, bind, onView }: AppProps) {
           }
           onClick={() => open(inLine || !canChat ? 'call' : 'chat')}
         >
-          <span class="presence__ring" />
+          {config.display === 'bubble' ? <span class="presence__ring" /> : null}
           <span class="presence__face">
-            <Portrait agent={agent} shot={CLOSE_UP} />
+            <Portrait agent={agent} shot={config.display === 'full' ? FULL_BODY : config.display === 'half' ? HALF_BODY : CLOSE_UP} />
           </span>
           <span class="presence__dot" />
           {client.mode === 'test' ? (

@@ -21,7 +21,7 @@
 import { define } from './element.js';
 
 export { CharacterXYZElement, define, inkFor, mount, TAG, type MountOptions, type WidgetHandle } from './element.js';
-export { applyLayer, DEFAULTS, type ColorMode, type LauncherStyle, type Position, type WidgetConfig } from './config.js';
+export { applyLayer, DEFAULTS, type ColorMode, type Display, type LauncherStyle, type Position, type WidgetConfig } from './config.js';
 export { CharacterXYZ, CxError } from '@characterxyz/web';
 
 define();

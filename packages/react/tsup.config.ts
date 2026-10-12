@@ -11,4 +11,6 @@ export default defineConfig({
   sourcemap: true,
   target: 'es2020',
   external: ['react', '@characterxyz/web', '@characterxyz/widget'],
+  // Next.js App Router: the component and the hook run only in the browser.
+  banner: { js: "'use client';" },
 });

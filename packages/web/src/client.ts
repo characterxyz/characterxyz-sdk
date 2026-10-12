@@ -13,7 +13,7 @@ export interface InitOptions {
   publishableKey?: string;
   /**
    * For signed-in visitors: return a session your server minted with its
-   * secret key (see `@characterxyz/web/server`). Called again before expiry.
+   * secret key (see `@characterxyz/server`). Called again before expiry.
    */
   getSessionToken?: () => Promise<string | SessionInfo>;
   /** Which of the key's agents to talk to. Defaults to the key's first. */

@@ -1,0 +1,44 @@
+name: release
+
+# Push a tag `v<version>` (the lockstep version in every package.json) to
+# publish all four packages to npm with provenance. Authenticates by npm
+# trusted publishing (OIDC): no npm token is stored anywhere. Each package
+# names this repository and this workflow file as its trusted publisher on
+# npmjs.com.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Trusted publishing needs npm 11.5.1 or later.
+          node-version: 24
+          cache: pnpm
+      - run: npm install -g npm@latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Tag matches the packages
+        run: |
+          for p in packages/*/package.json; do
+            v=$(node -p "require('./$p').version")
+            [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "$p is $v, tag is $GITHUB_REF_NAME"; exit 1; }
+          done
+      # pnpm pack rewrites workspace:^ to real versions; npm publishes the
+      # tarballs so OIDC and provenance apply. Dependencies first.
+      - name: Publish
+        run: |
+          mkdir -p .release
+          for p in web widget server react; do
+            (cd packages/$p && pnpm pack --pack-destination ../../.release)
+            npm publish .release/characterxyz-$p-*.tgz --provenance --access public --registry https://registry.npmjs.org/
+          done

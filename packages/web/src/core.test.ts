@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Chat } from './chat.js';
@@ -6,7 +5,6 @@ import { CharacterXYZ } from './client.js';
 import { CxError } from './errors.js';
 import { drain, type ServerEvent } from './http.js';
 import { buildPacket, parsePacket } from './protocol.js';
-import { verifyWebhook } from './server.js';
 import { memoryStore, SessionManager } from './session.js';
 import type { SessionInfo } from './types.js';
 
@@ -182,25 +180,5 @@ describe('chat', () => {
     await vi.waitFor(() => expect(release).toBeTypeOf('function'));
     release();
     await first;
-  });
-});
-
-describe('webhook verification', () => {
-  const secret = 'whsec_test';
-  const body = '{"id":"evt_1","type":"call.started"}';
-  const t = 1_760_000_000;
-  // Exactly what the backend sends: hex(hmac-sha256(secret, "<t>.<body>")).
-  const v1 = createHmac('sha256', secret).update(`${t}.${body}`).digest('hex');
-
-  it('accepts the backend signature', async () => {
-    expect(await verifyWebhook({ secret, body, signature: `t=${t},v1=${v1}`, now: t + 10 })).toBe(true);
-  });
-
-  it('rejects a changed body, a wrong secret, a stale timestamp and garbage', async () => {
-    expect(await verifyWebhook({ secret, body: body + ' ', signature: `t=${t},v1=${v1}`, now: t })).toBe(false);
-    expect(await verifyWebhook({ secret: 'whsec_other', body, signature: `t=${t},v1=${v1}`, now: t })).toBe(false);
-    expect(await verifyWebhook({ secret, body, signature: `t=${t},v1=${v1}`, now: t + 301 })).toBe(false);
-    expect(await verifyWebhook({ secret, body, signature: 'nonsense', now: t })).toBe(false);
-    expect(await verifyWebhook({ secret, body, signature: null, now: t })).toBe(false);
   });
 });

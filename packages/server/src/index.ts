@@ -1,10 +1,11 @@
 /**
- * `@characterxyz/web/server` — mint a session for a SIGNED-IN visitor, on
- * your server, with your secret key. Node 18+, Deno, Bun, edge runtimes.
+ * `@characterxyz/server` — mint a session for a SIGNED-IN visitor, on
+ * your server, with your secret key; verify webhooks. Node 18+, Deno, Bun,
+ * edge runtimes. Zero dependencies at runtime.
  *
  * ```ts
  * // e.g. a Next.js route handler: GET /api/characterxyz/session
- * import { createSession } from '@characterxyz/web/server';
+ * import { createSession } from '@characterxyz/server';
  *
  * export async function GET() {
  *   const user = await currentUser();
@@ -21,7 +22,7 @@
  * The visitor's chat history then follows them across devices, and webhooks
  * carry your id for them as `externalId`.
  */
-import type { SessionInfo } from './types.js';
+import type { SessionInfo } from '@characterxyz/web';
 
 export interface CreateSessionOptions {
   /** `cxyz_sk_…` — from your server's environment, never from code. */
@@ -70,4 +71,4 @@ export async function verifyWebhook(opts: { secret: string; body: string; signat
   return diff === 0;
 }
 
-export type { SessionInfo } from './types.js';
+export type { SessionInfo };

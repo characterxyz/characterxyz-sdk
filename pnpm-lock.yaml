@@ -48,6 +48,12 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
 
+  packages/server:
+    dependencies:
+      '@characterxyz/web':
+        specifier: workspace:^
+        version: link:../web
+
   packages/web: {}
 
   packages/widget:

@@ -12,14 +12,15 @@ customise the look in **Character XYZ › Settings › Developers**.
 
 | Package | What it is | Size (gzip) |
 |---|---|---|
-| [`@characterxyz/widget`](packages/widget) | The ready-made widget: `<character-xyz>` element, `mount()`, and the `cx.js` script-tag build | 26 KB, everything included |
+| [`@characterxyz/widget`](packages/widget) | The ready-made widget: `<character-xyz>` element, `mount()`, and the `cx.js` script-tag build. Works in any framework | 28 KB, everything included |
 | [`@characterxyz/web`](packages/web) | The headless core: sessions, streamed chat, calls and the queue. Zero dependencies | 7 KB |
-| [`@characterxyz/web/server`](packages/web/src/server.ts) | Server helpers: mint a session for a signed-in user, verify a webhook | 1 KB |
+| [`@characterxyz/server`](packages/server) | On your server: mint a session for a signed-in user, verify a webhook | 1 KB |
 | [`@characterxyz/react`](packages/react) | `<CharacterXYZWidget/>` and `useCharacterXYZ()` | 1 KB |
 | [`android/`](android) · [`swift/`](swift) | Native SDKs — scaffolded, not built yet | — |
 
-Design and decisions: `canon/docs/sdk-design.md` in the workspace. The API contract:
-[`spec/`](spec).
+Install exactly one: the widget for any site or framework, `@characterxyz/react` in React and Next.js
+(it brings the widget), `@characterxyz/web` to build your own UI, and `@characterxyz/server` on the server
+for signed-in visitors and webhooks. The API contract: [`spec/`](spec).
 
 ## Use it
 
@@ -64,7 +65,7 @@ callButton.onclick = async () => {        // from a click: it needs the micropho
 
 ```ts
 // on your server
-import { createSession } from '@characterxyz/web/server';
+import { createSession } from '@characterxyz/server';
 const session = await createSession({ secretKey: process.env.CHARACTERXYZ_SECRET_KEY!, visitor: { id: user.id }, origin: 'https://www.example.com' });
 
 // in the page
@@ -126,3 +127,11 @@ as an allowed site).
 
 **Versions** move in lockstep across every package and platform (the Swift Package Manager reads one
 tag per repository).
+
+**Releasing**: bump the version in every `package.json`, commit, and push a tag `v<version>`. The
+`release` workflow runs `pnpm check` and publishes all four packages to npm with provenance, through
+npm trusted publishing (no npm token anywhere).
+
+## License
+
+MIT

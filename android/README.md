@@ -13,7 +13,7 @@ never run. First steps:
    `AudioTrack` for the reply), and a Compose `CharacterXYZView`.
 
 Apps have no browser `Origin`, so a native app always mints its session on its own server with a
-secret key (`@characterxyz/web/server` `createSession`) and passes the token to the SDK.
+secret key (`@characterxyz/server` `createSession`) and passes the token to the SDK.
 
 # Apple (`../swift`)
 

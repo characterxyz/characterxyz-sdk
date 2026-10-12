@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Character XYZ SDKs: embed a Character XYZ agent (chat + voice call) in web, Android and Apple apps.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "packageManager": "pnpm@11.13.0",
   "engines": {
     "node": ">=20"

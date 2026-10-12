@@ -6,6 +6,7 @@ import type { WidgetConfig } from './config.js';
 import { blocks, clock, endCopy, eta, ordinal, type Inline } from './format.js';
 import { CLOSE_UP, MEDIUM } from './framing.js';
 import { BackIcon, ChatIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, PhoneIcon, RetryIcon, SendIcon, SparkIcon } from './icons.js';
+import { faceEmotion, FaceFrame, type FaceStatus } from './face-frame.js';
 import { Portrait } from './portrait.js';
 
 export type View = 'closed' | 'chat' | 'call';
@@ -258,14 +259,24 @@ export function App({ client, config, bind, onView }: AppProps) {
     if (view === 'chat') setTimeout(() => input.current?.focus({ preventScroll: true }), 60);
   }, [view]);
 
+  // The face frame (the app's own renderer) is wanted for a video character.
+  const wantsFace = config.face && !!agent.video;
+  const [faceStatus, setFaceStatus] = useState<FaceStatus>('loading');
+
   // Your turn: a chime, and the tab title if the visitor is elsewhere.
   const phase = state?.phase ?? 'idle';
   useEffect(() => {
     if (phase !== 'ready' || !call) return;
     chime();
     if (view === 'call') {
-      call.accept();
-      return;
+      // Join once the face frame has said who she is (her mood goes in the
+      // call's opening message), or after 3 s whatever it says: the hold is 30.
+      if (!wantsFace || faceStatus !== 'loading') {
+        call.accept();
+        return;
+      }
+      const t = setTimeout(() => call.accept(), 3000);
+      return () => clearTimeout(t);
     }
     if (typeof document !== 'undefined' && document.hidden) {
       const title = document.title;
@@ -276,7 +287,7 @@ export function App({ client, config, bind, onView }: AppProps) {
       };
       document.addEventListener('visibilitychange', restore);
     }
-  }, [phase, call, view, name]);
+  }, [phase, call, view, name, wantsFace, faceStatus]);
 
   const live = phase === 'live' || phase === 'connecting';
   useVoiceLevel(call, stage, live && view === 'call');
@@ -287,7 +298,7 @@ export function App({ client, config, bind, onView }: AppProps) {
   const startCall = async () => {
     setView('call');
     try {
-      await client.startCall({ autoAccept: false });
+      await client.startCall({ autoAccept: false, ...(wantsFace ? { face: { emotion: () => faceEmotion.current } } : {}) });
     } catch {
       // the call's own state carries the reason
     }
@@ -560,9 +571,14 @@ export function App({ client, config, bind, onView }: AppProps) {
 
   return (
     <div class={`panel ${closing ? 'is-closing' : ''}`} part="panel" role="dialog" aria-label={`Call with ${name}`}>
-      <div class="stage" ref={stage}>
+      <div class={`stage ${wantsFace && faceStatus === 'ready' ? 'stage--face' : ''}`} ref={stage}>
         <div class="stage__figure" style={{ opacity: phase === 'queued' ? 0.35 : 1, transition: 'opacity .6s' }}>
           <Portrait agent={agent} shot={MEDIUM} talking={!!s?.speaking} />
+          {wantsFace ? (
+            <div class={`stage__face ${faceStatus === 'ready' ? 'is-ready' : ''}`}>
+              <FaceFrame client={client} call={call} state={s} src={config.faceUrl} onStatus={setFaceStatus} />
+            </div>
+          ) : null}
         </div>
         {live ? <div class="voice" /> : null}
         <div class="stage__veil" />

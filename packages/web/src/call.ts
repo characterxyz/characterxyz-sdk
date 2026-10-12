@@ -15,6 +15,10 @@ export interface CallEvents extends Record<string, unknown> {
   captionRemoved: string;
   /** The turn is ready: accept() within `holdSeconds`. */
   ready: { holdSeconds: number };
+  /** One streamed face batch (kind-3 msgpack payload) for line `corr` — only with `face`. */
+  face: { corr: string; payload: Uint8Array };
+  /** A line of the agent's voice became audible, or ended (naturally or interrupted). */
+  line: { corr: string; event: 'audible' | 'end' };
   error: CxError;
 }
 
@@ -22,6 +26,12 @@ export interface CallOptions {
   /** Join the moment it is this visitor's turn (default true). */
   autoAccept?: boolean;
   deviceId?: string;
+  /**
+   * Ask for the agent's face streamed with the voice (Neural Lip Sync), for a
+   * UI that draws it. `emotion()` is read when the call connects: the face's
+   * mood as the face service takes it (`joy:0.3`), or null for neutral.
+   */
+  face?: { emotion?: () => string | null };
 }
 
 /** Talking over the agent this loud, this long, stops her. */
@@ -72,6 +82,13 @@ export class Call extends Emitter<CallEvents> {
 
   get state(): CallState {
     return this.s;
+  }
+
+  /** The line being voiced now, and how much of it has been heard (ms). */
+  audible(): { corr: string; ms: number } | null {
+    const corr = this.speakingCorr;
+    const p = corr ? this.players.get(corr) : undefined;
+    return corr && p ? { corr, ms: p.playedMs() } : null;
   }
 
   /** Loudness of the agent's voice right now, 0..1. */
@@ -188,7 +205,18 @@ export class Call extends Emitter<CallEvents> {
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'agent_identity', agent_id: this.agentId, skin_index: 0, blendshapes: false }));
+      const face = this.opts.face;
+      const emotion = face?.emotion?.() ?? null;
+      ws.send(
+        JSON.stringify({
+          type: 'agent_identity',
+          agent_id: this.agentId,
+          skin_index: 0,
+          blendshapes: !!face,
+          ...(face ? { blendshape_stream: true } : {}),
+          ...(face && emotion ? { face_emotion: emotion } : {}),
+        }),
+      );
       // This page does not gate the microphone: the server's own voice
       // detection judges every frame.
       ws.send(JSON.stringify({ type: 'mic_state', silero: 'off', denoise: false }));
@@ -236,7 +264,13 @@ export class Call extends Emitter<CallEvents> {
   private onSocket(data: unknown) {
     if (data instanceof ArrayBuffer) {
       const p = parsePacket(data);
-      if (!p || p.kind !== 1 || this.cancelled.has(p.corr)) return;
+      if (!p || this.cancelled.has(p.corr)) return;
+      if (p.kind === 3) {
+        // A copy, so the receiver may keep or transfer it.
+        if (this.opts.face) this.emit('face', { corr: p.corr, payload: p.payload.slice() });
+        return;
+      }
+      if (p.kind !== 1) return;
       let player = this.players.get(p.corr);
       if (!player) {
         // A new line: whatever was playing is over.
@@ -250,12 +284,14 @@ export class Call extends Emitter<CallEvents> {
           onStart: () => {
             this.speakingCorr = corr;
             this.set({ speaking: true });
+            this.emit('line', { corr, event: 'audible' });
             this.sendJson({ type: 'playback_started', correlationId: corr, timestampMs: Date.now() });
           },
           onEnd: () => {
             this.players.delete(corr);
             if (this.speakingCorr === corr) this.speakingCorr = null;
             this.set({ speaking: false });
+            this.emit('line', { corr, event: 'end' });
             this.sendJson({ type: 'playback_ended', correlationId: corr, timestampMs: Date.now(), reason: 'natural' });
             this.sendJson({ type: 'speech_ended' });
           },
@@ -293,6 +329,7 @@ export class Call extends Emitter<CallEvents> {
       this.cancelled.add(cid);
       this.players.get(cid)?.stop();
       this.players.delete(cid);
+      this.emit('line', { corr: cid, event: 'end' });
       if (this.speakingCorr === cid) {
         this.speakingCorr = null;
         this.set({ speaking: false });
@@ -316,6 +353,7 @@ export class Call extends Emitter<CallEvents> {
     this.cancelled.add(corr);
     this.speakingCorr = null;
     this.set({ speaking: false });
+    this.emit('line', { corr, event: 'end' });
     this.sendJson({ type: 'playback_ended', correlationId: corr, timestampMs: Date.now(), reason: 'interrupted' });
     this.sendJson({ type: 'interrupt', correlationId: corr, heardMs, timestampMs: Date.now() });
   }

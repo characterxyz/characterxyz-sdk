@@ -210,6 +210,14 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   background: radial-gradient(120% 70% at 50% 18%, color-mix(in oklab, var(--cx-accent) 26%, var(--cx-solid)) 0%, var(--cx-solid) 70%); }
 .stage__figure { position: absolute; inset: 0; }
 .stage__figure .portrait { position: absolute; inset: 0; }
+/* The app's own face renderer, faded in over the portrait once it is drawing. */
+.stage__face { position: absolute; inset: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; }
+.stage__face.is-ready { opacity: 1; }
+/* Over the skin's own (usually dark) backdrop the top controls go light. */
+.stage--face .stage__top .icon-btn { color: rgba(255, 255, 255, 0.85); }
+.stage--face .stage__top .icon-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.14); }
+.stage--face .badge { background: rgba(10, 8, 16, 0.45); color: #fff; border-color: rgba(255, 255, 255, 0.12); }
+.face-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal; }
 .stage__veil { position: absolute; left: 0; right: 0; bottom: 0; height: 58%; background: linear-gradient(to top, var(--cx-solid) 18%, color-mix(in oklab, var(--cx-solid) 0%, transparent)); pointer-events: none; }
 .stage__top { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 14px 14px 0 16px; }
 .badge { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--cx-bg); backdrop-filter: blur(12px); border: 1px solid var(--cx-line); font-variant-numeric: tabular-nums; }

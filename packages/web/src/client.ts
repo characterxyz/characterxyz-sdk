@@ -2,6 +2,7 @@ import { Call, type CallOptions } from './call.js';
 import { Chat } from './chat.js';
 import { Emitter } from './emitter.js';
 import { CxError } from './errors.js';
+import { request } from './http.js';
 import { localStore, memoryStore, SessionManager, type VisitorStore } from './session.js';
 import type { AgentCard, Features, SessionInfo } from './types.js';
 
@@ -83,6 +84,16 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
   /** The call in progress (queued, ready or live), if any. */
   get call(): Call | null {
     return this.currentCall && this.currentCall.state.phase !== 'ended' ? this.currentCall : null;
+  }
+
+  /**
+   * The worn video character's full render data (the public projection the
+   * app's Stage reads), for a UI that draws the face — the widget hands it to
+   * the app's renderer. Null when the agent wears none.
+   */
+  async videoAvatar(): Promise<Record<string, unknown> | null> {
+    const token = await this.session.token();
+    return request<Record<string, unknown> | null>(this.apiUrl, '/sdk/v1/agent/video-avatar', { token });
   }
 
   /** Start a voice call. Call from a click: it needs the microphone and audio unlocked. */

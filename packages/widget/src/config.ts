@@ -40,6 +40,12 @@ export interface WidgetConfig {
   zIndex: number;
   /** Open the panel on load. */
   open: boolean;
+  /**
+   * Draw the agent's face in calls with Character XYZ's own renderer (lip
+   * sync, her own teeth and eyes), framed from `faceUrl`. Off = the portrait clips.
+   */
+  face: boolean;
+  faceUrl: string;
 }
 
 export const DEFAULTS: WidgetConfig = {
@@ -61,6 +67,8 @@ export const DEFAULTS: WidgetConfig = {
   offsetY: 20,
   zIndex: 2147483000,
   open: false,
+  face: true,
+  faceUrl: 'https://www.character.xyz/embed/face',
 };
 
 const num = (v: unknown, lo: number, hi: number): number | undefined => {
@@ -121,6 +129,8 @@ export function applyLayer(base: WidgetConfig, raw: Record<string, unknown> | nu
   c.offsetY = num(raw.offsetY, 0, 200) ?? c.offsetY;
   c.zIndex = num(raw.zIndex, 0, 2147483647) ?? c.zIndex;
   c.open = bool(raw.open) ?? c.open;
+  c.face = bool(raw.face) ?? c.face;
+  if (typeof raw.faceUrl === 'string' && /^https?:\/\/[^\s"'<>]+$/.test(raw.faceUrl.trim())) c.faceUrl = raw.faceUrl.trim();
   return c;
 }
 

@@ -10,6 +10,7 @@
 //   CXYZ_WEBHOOK_SECRET    whsec_…          enables signature checks on /webhooks
 //   CXYZ_API_URL           default http://127.0.0.1:8080 (the local backend)
 //   CXYZ_AGENT_ID          which of the key's agents to show
+//   CXYZ_FACE_URL          the app's face page (default http://localhost:3000/embed/face)
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -45,7 +46,8 @@ const server = createServer(async (req, res) => {
       const html = readFileSync(join(here, 'index.html'), 'utf8')
         .replaceAll('%PUBLISHABLE_KEY%', env('CXYZ_PUBLISHABLE_KEY'))
         .replaceAll('%API_URL%', API)
-        .replaceAll('%AGENT_ID%', env('CXYZ_AGENT_ID'));
+        .replaceAll('%AGENT_ID%', env('CXYZ_AGENT_ID'))
+        .replaceAll('%FACE_URL%', env('CXYZ_FACE_URL', 'http://localhost:3000/embed/face'));
       res.writeHead(200, { 'Content-Type': types['.html'], 'Cache-Control': 'no-store' });
       return res.end(html);
     }

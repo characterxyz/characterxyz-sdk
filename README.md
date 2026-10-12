@@ -73,8 +73,13 @@ mount({ getSessionToken: () => fetch('/api/characterxyz/session').then((r) => r.
 
 ### Customising, three layers
 
-1. **Settings** — accent, theme (auto / light / dark), corner, radius, font, subtitle, greeting,
-   suggested questions, which buttons show. Saved on the key from the Embed designer, or passed in code.
+1. **Settings** — which agent (`agentId`), and how she is presented: `display` (bubble / half / full
+   body), `launcher`, `accent`, `mode` (auto / light / dark), `position`, `radius`, `font`, `showChat`,
+   `showCall`, `branding`. The defaults are saved on the key from Character XYZ's Embed page; any site
+   overrides any of them in its snippet (`data-display="full"`) or in code (`mount({ display: 'full' })`).
+   **What the agent says is the agent's own** — its persona, knowledge and Execution Graph — not an embed
+   setting. (`greeting`, `subtitle`, `suggestions` and `placeholder` exist only as per-site overrides for
+   an integrator who needs one.)
 2. **CSS** — the widget lives in a Shadow DOM, so nothing of yours leaks in or out. Tokens:
    `character-xyz { --cx-accent; --cx-font; --cx-radius }`; parts: `::part(launcher | presence | actions | panel | header | composer | banner | message | message-agent | message-visitor | greeting)`.
 3. **Headless** — `@characterxyz/web` gives you every capability without our UI.

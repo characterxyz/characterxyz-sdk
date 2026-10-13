@@ -1,6 +1,6 @@
 {
   "name": "@characterxyz/web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Character XYZ for the web, headless: sessions, streamed chat, voice calls with a fair queue. Framework-free, zero dependencies.",
   "license": "MIT",
   "type": "module",

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type { WidgetConfig } from './config.js';
 import { blocks, clock, endCopy, eta, ordinal, type Inline } from './format.js';
 import { CLOSE_UP, FULL_BODY, HALF_BODY, MEDIUM } from './framing.js';
+import { extractContact, type TypedContact } from './contact.js';
 import { BackIcon, ChatIcon, CheckIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, NewChatIcon, PhoneIcon, RetryIcon, SendIcon } from './icons.js';
 import { faceEmotion, FaceFrame, type FaceStatus } from './face-frame.js';
 import { Portrait } from './portrait.js';
@@ -164,15 +165,17 @@ function DetailsCard({
   onSend,
   onSkip,
   skipLabel,
+  initial,
 }: {
   form: DetailsForm;
+  initial?: TypedContact;
   title: string;
   note: string | null;
   onSend: (d: ContactDetails) => Promise<void>;
   onSkip: () => void;
   skipLabel: string;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(() => ({ ...(initial ?? {}) }) as Record<string, string>);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -336,6 +339,9 @@ export function App({ client, config, bind, onView }: AppProps) {
   const [detailsDone, setDetailsDone] = useState<'sent' | 'skipped' | null>(null);
   const [sentName, setSentName] = useState('');
   const [callCard, setCallCard] = useState<DetailsForm | null>(null);
+  // Details the visitor TYPED into the chat: the card opens already filled in,
+  // after her reply, and sending it is still the one confirmation.
+  const [typed, setTyped] = useState<{ form: DetailsForm; values: TypedContact } | null>(null);
 
   const setView = useCallback(
     (v: View) => {
@@ -475,6 +481,7 @@ export function App({ client, config, bind, onView }: AppProps) {
   const settleDetails = (how: 'sent' | 'skipped', firstName = '') => {
     setDetailsDone(how);
     setSentName(firstName);
+    setTyped(null);
     const thenCall = !!callCard;
     setCallCard(null);
     if (thenCall) void startCall();
@@ -500,6 +507,7 @@ export function App({ client, config, bind, onView }: AppProps) {
     setGreeted(false);
     setDetailsDone(null);
     setCallCard(null);
+    setTyped(null);
     setDraft('');
     setOpening(await client.opening(true));
   };
@@ -513,9 +521,21 @@ export function App({ client, config, bind, onView }: AppProps) {
     }
   };
 
+  // The card's settings while details may still be left: the latest a reply
+  // carried, else the opening's (it is null once this conversation was asked).
+  const knownForm: DetailsForm | null =
+    [...messages].reverse().find((m) => m.detailsForm || m.askDetails)?.detailsForm ??
+    [...messages].reverse().find((m) => m.askDetails)?.askDetails ??
+    opening?.details ??
+    null;
+
   const sendText = async (text: string) => {
     const t = text.trim();
     if (!t || busy) return;
+    // ⚠ A "NOT NOW" DOES NOT CLOSE THIS DOOR: someone who typed their email has
+    // changed their mind. Only an already-sent card does.
+    const found = knownForm && detailsDone !== 'sent' ? extractContact(t) : null;
+    if (found && knownForm) setTyped({ form: knownForm, values: found });
     setDraft('');
     if (input.current) input.current.style.height = '';
     try {
@@ -526,6 +546,18 @@ export function App({ client, config, bind, onView }: AppProps) {
   };
 
   const lastAgentStreaming = messages.length > 0 && messages[messages.length - 1]!.role === 'agent' && messages[messages.length - 1]!.streaming;
+
+  // Which details card is open, if any — one at a time, and while one is open
+  // it is the only thing asking (the suggestion chips step aside).
+  const lastMsg = messages[messages.length - 1];
+  const invited = lastMsg?.role === 'agent' && !lastMsg.streaming ? lastMsg.askDetails : undefined;
+  const card: { form: DetailsForm; kind: 'call' | 'typed' | 'invited'; initial?: TypedContact } | null = callCard
+    ? { form: callCard, kind: 'call' }
+    : typed && detailsDone !== 'sent' && !busy
+      ? { form: typed.form, kind: 'typed', initial: typed.values }
+      : invited && !detailsDone
+        ? { form: invited, kind: 'invited' }
+        : null;
 
   // ---------------------------------------------------------------- closed
   if (view === 'closed') {
@@ -700,13 +732,15 @@ export function App({ client, config, bind, onView }: AppProps) {
                   <div class="msg msg--agent" part="message message-agent">
                     <Rich text={firstLine} />
                   </div>
-                  <QuickReplies items={starters} onPick={(q) => void sendText(q)}>
-                    {canCall ? (
-                      <button class="chip chip--call" onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
-                        <PhoneIcon size={14} /> Call {name}
-                      </button>
-                    ) : null}
-                  </QuickReplies>
+                  {card ? null : (
+                    <QuickReplies items={starters} onPick={(q) => void sendText(q)}>
+                      {canCall ? (
+                        <button class="chip chip--call" onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
+                          <PhoneIcon size={14} /> Call {name}
+                        </button>
+                      ) : null}
+                    </QuickReplies>
+                  )}
                 </Fragment>
               )}
             </Fragment>
@@ -723,7 +757,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                 <div class={`msg msg--${m.role} ${m.failed ? 'msg--failed' : ''} ${m.streaming ? 'caret' : ''}`} part={`message message-${m.role}`}>
                   {m.role === 'agent' ? <Rich text={m.text} /> : m.text}
                 </div>
-                {m === messages[messages.length - 1] && m.role === 'agent' && !m.streaming && !busy && m.suggestions?.length ? (
+                {m === messages[messages.length - 1] && m.role === 'agent' && !m.streaming && !busy && !card && m.suggestions?.length ? (
                   <QuickReplies items={m.suggestions} onPick={(q) => void sendText(q)} />
                 ) : null}
                 {m.failed && m.error ? (
@@ -745,23 +779,21 @@ export function App({ client, config, bind, onView }: AppProps) {
               <div class="msg msg--agent" part="message message-agent">
                 {opening.welcomeBack}
               </div>
-              <QuickReplies items={starters} onPick={(q) => void sendText(q)} />
+              {card ? null : <QuickReplies items={starters} onPick={(q) => void sendText(q)} />}
             </Fragment>
           ) : null}
           {(() => {
-            const last = messages[messages.length - 1];
-            const asked = last?.role === 'agent' && !last.streaming ? last.askDetails : undefined;
-            const form = callCard ?? (detailsDone ? undefined : asked);
-            if (form) {
+            if (card) {
               return (
                 <DetailsCard
-                  key={callCard ? 'call' : last?.id}
-                  form={form}
-                  title={callCard ? `Before you call ${name}` : 'Leave your details'}
-                  note={callCard ? 'So the team can follow up, even if the line drops.' : null}
+                  key={card.kind === 'invited' ? lastMsg?.id : card.kind}
+                  form={card.form}
+                  initial={card.initial}
+                  title={card.kind === 'call' ? `Before you call ${name}` : card.kind === 'typed' ? 'Confirm your details' : 'Leave your details'}
+                  note={card.kind === 'call' ? 'So the team can follow up, even if the line drops.' : card.kind === 'typed' ? 'From what you typed. Check them and send.' : null}
                   onSend={sendDetails}
                   onSkip={skipDetails}
-                  skipLabel={callCard ? 'Skip and call' : 'Not now'}
+                  skipLabel={card.kind === 'call' ? 'Skip and call' : 'Not now'}
                 />
               );
             }

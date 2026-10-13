@@ -62,6 +62,8 @@ export interface ChatMessage {
   suggestions?: string[];
   /** On a reply just written: she invited the visitor to leave their details; show this card. */
   askDetails?: DetailsForm;
+  /** On a reply just written: the card's settings while details may still be left (not an invitation). */
+  detailsForm?: DetailsForm;
 }
 
 /** The contact card: which fields to ask, and the consent line to show. */

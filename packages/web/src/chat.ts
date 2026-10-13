@@ -94,6 +94,7 @@ export class Chat extends Emitter<ChatEvents> {
               createdAt: String(d.createdAt ?? reply.createdAt),
               ...(next.length ? { suggestions: next } : {}),
               ...(d.askDetails && typeof d.askDetails === 'object' ? { askDetails: d.askDetails as ChatMessage['askDetails'] } : {}),
+              ...(d.detailsForm && typeof d.detailsForm === 'object' ? { detailsForm: d.detailsForm as ChatMessage['detailsForm'] } : {}),
             };
           } else if (event === 'error') {
             failure = typeof d?.message === 'string' ? d.message : 'Something went wrong.';

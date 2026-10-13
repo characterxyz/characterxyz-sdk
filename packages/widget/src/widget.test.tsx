@@ -127,6 +127,7 @@ const fakeClient = vi.hoisted(() => ({
     welcomeBack: 'Good to see you again!',
     teaser: 'Need a hand with your pipeline?',
     suggestions: ['How does event mode work?', 'What is the follow-up cadence?'],
+    details: { fields: ['name', 'email', 'phone'], privacyUrl: null, consent: 'By sending, you agree to be contacted about your enquiry.' },
   }),
   destroy: vi.fn(),
 }));
@@ -237,5 +238,34 @@ describe('accent ink', () => {
     expect(inkFor('#7c5cff')).toBe('#ffffff');
     expect(inkFor('#ffd60a')).toBe('#14121a');
     expect(inkFor('rebeccapurple')).toBe('#ffffff');
+  });
+});
+
+describe('details typed into the chat', () => {
+  it('finds an email, a phone and an explicit name, and nothing else', async () => {
+    const { extractContact } = await import('./contact.js');
+    expect(extractContact("sure, I'm ginger, ginger@alpha.com, 72005 80713")).toEqual({ name: 'Ginger', email: 'ginger@alpha.com', phone: '72005 80713' });
+    expect(extractContact('My name is Priya Raman and my number is +91 98400 12345')).toEqual({ name: 'Priya Raman', phone: '+91 98400 12345' });
+    expect(extractContact("I'm interested, reach me at zeno@character.xyz.")).toEqual({ email: 'zeno@character.xyz' });
+    expect(extractContact('We have 8 people and a budget of 2026')).toBeNull();
+    expect(extractContact('How much does it cost?')).toBeNull();
+  });
+
+  it('opens the card filled in with what was typed, and the chips step aside', async () => {
+    const { mount } = await import('./element.js');
+    const w = mount({ publishableKey: 'cxyz_pk_live_AAAAAAAAAAAAAAAAAAAAAAAA' });
+    await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.presence')).not.toBeNull(), { timeout: 3000 });
+    w.open('chat');
+    const root = w.element.shadowRoot!;
+    await vi.waitFor(() => expect(root.querySelector('.chips--start')).not.toBeNull(), { timeout: 3000 });
+    const ta = root.querySelector('textarea')!;
+    ta.value = "I'm Ginger, ginger@alpha.com";
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect((root.querySelector('.send') as HTMLButtonElement).disabled).toBe(false));
+    (root.querySelector('.send') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(root.querySelector('.card__title')?.textContent).toBe('Confirm your details'), { timeout: 3000 });
+    const values = [...root.querySelectorAll<HTMLInputElement>('.card input')].map((i) => i.value);
+    expect(values).toEqual(['Ginger', 'ginger@alpha.com', '']);
+    expect(root.querySelector('.chips--start')).toBeNull();
   });
 });

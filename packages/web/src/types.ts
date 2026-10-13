@@ -60,6 +60,26 @@ export interface ChatMessage {
   error?: string;
   /** On a reply just written: what the visitor might ask next. Not kept in the history. */
   suggestions?: string[];
+  /** On a reply just written: she invited the visitor to leave their details; show this card. */
+  askDetails?: DetailsForm;
+}
+
+/** The contact card: which fields to ask, and the consent line to show. */
+export interface DetailsForm {
+  /** Always `name` and `email`; `phone` and `company` when the key asks for them. */
+  fields: ('name' | 'email' | 'phone' | 'company')[];
+  /** The brand's privacy policy, linked from the consent line. */
+  privacyUrl: string | null;
+  /** Shown under the card; sending is the consent. */
+  consent: string;
+}
+
+/** What a visitor leaves. */
+export interface ContactDetails {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
 }
 
 /**
@@ -75,6 +95,8 @@ export interface Opening {
   teaser: string;
   /** What a visitor would most likely ask first. May be empty. */
   suggestions: string[];
+  /** The contact card to offer before a call; null when nothing receives leads or this conversation was asked. */
+  details?: DetailsForm | null;
 }
 
 export type CallPhase =

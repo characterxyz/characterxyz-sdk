@@ -4,7 +4,7 @@ import { Emitter } from './emitter.js';
 import { CxError } from './errors.js';
 import { request } from './http.js';
 import { localStore, memoryStore, SessionManager, type VisitorStore } from './session.js';
-import type { AgentCard, Features, Opening, SessionInfo } from './types.js';
+import type { AgentCard, ContactDetails, Features, Opening, SessionInfo } from './types.js';
 
 export const DEFAULT_API_URL = 'https://api.character.xyz';
 
@@ -103,12 +103,29 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
    * line, a teaser and likely first questions — written by her and cached by
    * the server. Fetched once per page; null if it could not be had.
    */
-  opening(): Promise<Opening | null> {
+  opening(refresh = false): Promise<Opening | null> {
+    if (refresh) this.openingP = null;
     this.openingP ??= this.session
       .token()
       .then((token) => request<Opening>(this.apiUrl, '/sdk/v1/agent/opening', { token }))
       .catch(() => null);
     return this.openingP;
+  }
+
+  /**
+   * Leave the visitor's details for the brand's team. Sending is the consent
+   * (the card says so). Fails `invalid` with `fields` naming each problem.
+   */
+  async sendDetails(details: ContactDetails): Promise<void> {
+    const token = await this.session.token();
+    const page = typeof location !== 'undefined' ? location.href : undefined;
+    await request(this.apiUrl, '/sdk/v1/lead', { token, body: { ...details, consent: true, ...(page ? { page } : {}) } });
+  }
+
+  /** "Not now" on the details card: she will not ask again in this conversation. */
+  async declineDetails(): Promise<void> {
+    const token = await this.session.token();
+    await request(this.apiUrl, '/sdk/v1/lead/decline', { token, method: 'POST', body: {} });
   }
 
   /** Start a voice call. Call from a click: it needs the microphone and audio unlocked. */

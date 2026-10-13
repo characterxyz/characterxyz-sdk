@@ -34,4 +34,6 @@ export const CloseIcon = ({ size = 18 }: P) => svg(size, <path d="M6 6l12 12M18 
 export const SendIcon = ({ size = 18 }: P) => svg(size, <path d="M12 19V5M5.5 11.5L12 5l6.5 6.5" />);
 export const BackIcon = ({ size = 18 }: P) => svg(size, <path d="M15 5l-7 7 7 7" />);
 export const SparkIcon = ({ size = 14 }: P) => svg(size, <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />);
+export const NewChatIcon = ({ size = 18 }: P) => svg(size, <path d="M12 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V12M17.5 3.5a2.1 2.1 0 0 1 3 3L13 14l-4 1 1-4z" />);
+export const CheckIcon = ({ size = 14 }: P) => svg(size, <path d="M5 12.5l4.2 4.2L19 7" />);
 export const RetryIcon = ({ size = 14 }: P) => svg(size, <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />);

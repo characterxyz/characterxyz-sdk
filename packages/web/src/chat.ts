@@ -93,6 +93,7 @@ export class Chat extends Emitter<ChatEvents> {
               text: String(d.text ?? reply.text),
               createdAt: String(d.createdAt ?? reply.createdAt),
               ...(next.length ? { suggestions: next } : {}),
+              ...(d.askDetails && typeof d.askDetails === 'object' ? { askDetails: d.askDetails as ChatMessage['askDetails'] } : {}),
             };
           } else if (event === 'error') {
             failure = typeof d?.message === 'string' ? d.message : 'Something went wrong.';
@@ -118,6 +119,19 @@ export class Chat extends Emitter<ChatEvents> {
       this.abort = null;
       this.setBusy(false);
     }
+  }
+
+  /**
+   * Start a new conversation. The old one is archived by the server, not
+   * deleted; the visitor simply starts fresh.
+   */
+  async reset(): Promise<void> {
+    this.stop();
+    const token = await this.session.token();
+    await send(this.apiUrl, '/sdk/v1/chat/messages', { method: 'DELETE', token });
+    this.list = [];
+    this.loaded = true;
+    this.publish();
   }
 
   /** Send a failed message again. */

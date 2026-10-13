@@ -13,12 +13,15 @@ export type CxErrorCode =
 export class CxError extends Error {
   readonly code: CxErrorCode;
   readonly status: number;
+  /** On `invalid`: what is wrong with each field, by its name (`email`, `name`…). */
+  readonly fields: Record<string, string>;
 
-  constructor(code: CxErrorCode, message: string, status = 0) {
+  constructor(code: CxErrorCode, message: string, status = 0, fields: Record<string, string> = {}) {
     super(message);
     this.name = 'CxError';
     this.code = code;
     this.status = status;
+    this.fields = fields;
   }
 }
 

@@ -210,6 +210,25 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .chip svg { color: var(--cx-accent); }
 /* Quick replies sit under her message, on her side, and arrive just after it. */
 .chips--start { justify-content: flex-start; margin: 2px 0 4px; animation: cx-rise .4s var(--cx-ease) .12s both; }
+/* The details card: in the conversation, on her side, never a gate. */
+.card { align-self: stretch; margin: 2px 0 6px; padding: 14px; border-radius: 16px; background: var(--cx-solid); border: 1px solid var(--cx-line); display: flex; flex-direction: column; gap: 10px; animation: cx-rise .35s var(--cx-ease) both; }
+.card__title { font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; }
+.card__note { font-size: 12.5px; color: var(--cx-ink-2); margin-top: -6px; }
+.card__field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--cx-ink-2); }
+.card__field i { font-style: normal; font-weight: 400; color: var(--cx-ink-3); }
+.card__field input { height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 14px; font-weight: 400; outline: none; transition: border-color .2s; }
+.card__field input:focus { border-color: var(--cx-accent); }
+.card__field input[aria-invalid="true"] { border-color: #e5484d; }
+.card__field em { font-style: normal; font-weight: 400; color: #e5484d; }
+.card__consent { font-size: 11.5px; line-height: 1.45; color: var(--cx-ink-3); }
+.card__consent a { color: var(--cx-ink-2); text-decoration: underline; }
+.card__failed { font-size: 12.5px; color: #e5484d; }
+.card__actions { display: flex; gap: 8px; }
+.btn--sm { height: 36px; padding: 0 16px; font-size: 13.5px; }
+.btn--ghost { background: transparent; color: var(--cx-ink-2); }
+.btn--ghost:hover { background: var(--cx-bubble); }
+.notice { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--cx-ink-2); padding: 2px 4px 6px; animation: cx-rise .35s var(--cx-ease) both; }
+.notice svg { color: var(--cx-ok); }
 .chip--call { color: var(--cx-accent); border-color: color-mix(in oklab, var(--cx-accent) 45%, transparent); font-weight: 600; }
 
 .compose { padding: 10px 12px 12px; }

@@ -1,11 +1,11 @@
-import type { Call, CallState, Caption, CharacterXYZ, ChatMessage, Opening } from '@characterxyz/web';
+import type { Call, CallState, Caption, CharacterXYZ, ChatMessage, ContactDetails, DetailsForm, Opening } from '@characterxyz/web';
 import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 import type { WidgetConfig } from './config.js';
 import { blocks, clock, endCopy, eta, ordinal, type Inline } from './format.js';
 import { CLOSE_UP, FULL_BODY, HALF_BODY, MEDIUM } from './framing.js';
-import { BackIcon, ChatIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, PhoneIcon, RetryIcon, SendIcon } from './icons.js';
+import { BackIcon, ChatIcon, CheckIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, NewChatIcon, PhoneIcon, RetryIcon, SendIcon } from './icons.js';
 import { faceEmotion, FaceFrame, type FaceStatus } from './face-frame.js';
 import { Portrait } from './portrait.js';
 
@@ -149,6 +149,110 @@ function Text({ parts }: { parts: Inline[] }) {
   );
 }
 
+const LABELS: Record<string, { label: string; type: string; auto: string }> = {
+  name: { label: 'Name', type: 'text', auto: 'name' },
+  email: { label: 'Email', type: 'email', auto: 'email' },
+  phone: { label: 'Phone', type: 'tel', auto: 'tel' },
+  company: { label: 'Company', type: 'text', auto: 'organization' },
+};
+
+/** The contact card: a few fields in the chat, skippable, sending is the consent. */
+function DetailsCard({
+  form,
+  title,
+  note,
+  onSend,
+  onSkip,
+  skipLabel,
+}: {
+  form: DetailsForm;
+  title: string;
+  note: string | null;
+  onSend: (d: ContactDetails) => Promise<void>;
+  onSkip: () => void;
+  skipLabel: string;
+}) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [failed, setFailed] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const first = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    setTimeout(() => first.current?.focus({ preventScroll: true }), 80);
+  }, []);
+  return (
+    <form
+      class="card"
+      part="details"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setSending(true);
+        setErrors({});
+        setFailed(null);
+        try {
+          await onSend({
+            name: values.name ?? '',
+            email: values.email ?? '',
+            ...(values.phone ? { phone: values.phone } : {}),
+            ...(values.company ? { company: values.company } : {}),
+          });
+        } catch (err) {
+          const fields = (err as { fields?: Record<string, string> }).fields ?? {};
+          if (Object.keys(fields).length) setErrors(fields);
+          else setFailed((err as Error).message || 'Could not send. Try again.');
+        } finally {
+          setSending(false);
+        }
+      }}
+    >
+      <div class="card__title">{title}</div>
+      {note ? <div class="card__note">{note}</div> : null}
+      {form.fields.map((f, i) => {
+        const spec = LABELS[f]!;
+        return (
+          <label class="card__field" key={f}>
+            <span>
+              {spec.label}
+              {f === 'phone' || f === 'company' ? <i> · optional</i> : null}
+            </span>
+            <input
+              ref={i === 0 ? first : undefined}
+              type={spec.type}
+              autocomplete={spec.auto}
+              required={f === 'name' || f === 'email'}
+              maxLength={f === 'email' ? 254 : 120}
+              value={values[f] ?? ''}
+              aria-invalid={errors[f] ? 'true' : undefined}
+              onInput={(e) => setValues((v) => ({ ...v, [f]: e.currentTarget.value }))}
+            />
+            {errors[f] ? <em>{errors[f]}</em> : null}
+          </label>
+        );
+      })}
+      <div class="card__consent">
+        {form.consent}
+        {form.privacyUrl ? (
+          <Fragment>
+            {' '}
+            <a href={form.privacyUrl} target="_blank" rel="noopener noreferrer">
+              Privacy policy
+            </a>
+          </Fragment>
+        ) : null}
+      </div>
+      {failed ? <div class="card__failed">{failed}</div> : null}
+      <div class="card__actions">
+        <button type="submit" class="btn btn--accent btn--sm" disabled={sending}>
+          {sending ? 'Sending…' : 'Send'}
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm" onClick={onSkip} disabled={sending}>
+          {skipLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /** Tappable questions under her message: what to ask first, or next. */
 function QuickReplies({ items, onPick, children }: { items: readonly string[]; onPick: (q: string) => void; children?: ComponentChildren }) {
   if (!items.length && !children) return null;
@@ -224,6 +328,14 @@ export function App({ client, config, bind, onView }: AppProps) {
   // then for a short typing beat, so it arrives like a message, not a label.
   const [history, setHistory] = useState<'loading' | 'empty' | number>('loading');
   const [greeted, setGreeted] = useState(false);
+
+  // HER DETAILS CARD, asked at a moment of intent, never before the chat: under
+  // the reply where she invited the visitor (`askDetails`), or once before a
+  // call when the key has somewhere to send it (`opening.details`). Sending or
+  // "Not now" settles it for this conversation.
+  const [detailsDone, setDetailsDone] = useState<'sent' | 'skipped' | null>(null);
+  const [sentName, setSentName] = useState('');
+  const [callCard, setCallCard] = useState<DetailsForm | null>(null);
 
   const setView = useCallback(
     (v: View) => {
@@ -348,6 +460,50 @@ export function App({ client, config, bind, onView }: AppProps) {
   // Every hook above the early returns: Preact keys hooks by call order.
   const startPos = useMemoStart(call, state?.position ?? 1);
 
+  /** A call, after the details card when there is one to offer first. */
+  const beginCall = () => {
+    const form = opening?.details;
+    if (form && !detailsDone && canChat) {
+      setCallCard(form);
+      setView('chat');
+      void loadHistory();
+      return;
+    }
+    void startCall();
+  };
+
+  const settleDetails = (how: 'sent' | 'skipped', firstName = '') => {
+    setDetailsDone(how);
+    setSentName(firstName);
+    const thenCall = !!callCard;
+    setCallCard(null);
+    if (thenCall) void startCall();
+  };
+
+  const sendDetails = async (d: ContactDetails) => {
+    await client.sendDetails(d);
+    settleDetails('sent', d.name.trim().split(/\s+/)[0] ?? '');
+  };
+
+  const skipDetails = () => {
+    void client.declineDetails().catch(() => {});
+    settleDetails('skipped');
+  };
+
+  const startOver = async () => {
+    try {
+      await client.chat.reset();
+    } catch {
+      return;
+    }
+    setHistory('empty');
+    setGreeted(false);
+    setDetailsDone(null);
+    setCallCard(null);
+    setDraft('');
+    setOpening(await client.opening(true));
+  };
+
   const startCall = async () => {
     setView('call');
     try {
@@ -441,7 +597,7 @@ export function App({ client, config, bind, onView }: AppProps) {
             <button
               class={`act act--call ${inLine ? 'act--live' : ''}`}
               aria-label={inLine ? (phase === 'queued' ? `You are ${ordinal(state?.position ?? 1)} in line. Open your call` : 'Back to your call') : `Call ${name}`}
-              onClick={() => (inLine ? open('call') : void startCall())}
+              onClick={() => (inLine ? open('call') : beginCall())}
             >
               <PhoneIcon size={20} />
               <span class="act__label" aria-hidden="true">
@@ -473,8 +629,13 @@ export function App({ client, config, bind, onView }: AppProps) {
           {busy ? 'Typing…' : subtitle || 'Online'}
         </div>
       </div>
+      {view === 'chat' && messages.length > 0 && !busy ? (
+        <button class="icon-btn" aria-label="Start a new conversation" title="Start a new conversation" onClick={() => void startOver()}>
+          <NewChatIcon />
+        </button>
+      ) : null}
       {canCall && view === 'chat' ? (
-        <button class="icon-btn icon-btn--accent" aria-label={`Call ${name}`} title={`Call ${name}`} onClick={() => (call && phase !== 'ended' ? setView('call') : void startCall())}>
+        <button class="icon-btn icon-btn--accent" aria-label={`Call ${name}`} title={`Call ${name}`} onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
           <PhoneIcon size={18} />
         </button>
       ) : null}
@@ -541,7 +702,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                   </div>
                   <QuickReplies items={starters} onPick={(q) => void sendText(q)}>
                     {canCall ? (
-                      <button class="chip chip--call" onClick={() => (call && phase !== 'ended' ? setView('call') : void startCall())}>
+                      <button class="chip chip--call" onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
                         <PhoneIcon size={14} /> Call {name}
                       </button>
                     ) : null}
@@ -587,6 +748,29 @@ export function App({ client, config, bind, onView }: AppProps) {
               <QuickReplies items={starters} onPick={(q) => void sendText(q)} />
             </Fragment>
           ) : null}
+          {(() => {
+            const last = messages[messages.length - 1];
+            const asked = last?.role === 'agent' && !last.streaming ? last.askDetails : undefined;
+            const form = callCard ?? (detailsDone ? undefined : asked);
+            if (form) {
+              return (
+                <DetailsCard
+                  key={callCard ? 'call' : last?.id}
+                  form={form}
+                  title={callCard ? `Before you call ${name}` : 'Leave your details'}
+                  note={callCard ? 'So the team can follow up, even if the line drops.' : null}
+                  onSend={sendDetails}
+                  onSkip={skipDetails}
+                  skipLabel={callCard ? 'Skip and call' : 'Not now'}
+                />
+              );
+            }
+            return detailsDone === 'sent' ? (
+              <div class="notice" role="status">
+                <CheckIcon /> {sentName ? `Thanks, ${sentName}. ` : 'Thanks. '}The team will be in touch.
+              </div>
+            ) : null;
+          })()}
         </div>
         <form
           class="compose"

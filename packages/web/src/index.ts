@@ -30,6 +30,8 @@ export type {
   CallState,
   Caption,
   ChatMessage,
+  ContactDetails,
+  DetailsForm,
   Features,
   Opening,
   SessionInfo,

@@ -9,13 +9,17 @@ export interface RequestOptions {
 
 async function errorFrom(res: Response): Promise<CxError> {
   let message = '';
+  const fields: Record<string, string> = {};
   try {
-    const j = (await res.json()) as { message?: unknown };
+    const j = (await res.json()) as { message?: unknown; errors?: { path?: unknown; message?: unknown }[] };
     if (typeof j?.message === 'string') message = j.message;
+    for (const e of Array.isArray(j?.errors) ? j.errors : []) {
+      if (typeof e?.path === 'string' && typeof e?.message === 'string') fields[e.path] = e.message;
+    }
   } catch {
     // not JSON: the status says enough
   }
-  return new CxError(codeForStatus(res.status), message || `Request failed (${res.status})`, res.status);
+  return new CxError(codeForStatus(res.status), message || `Request failed (${res.status})`, res.status, fields);
 }
 
 export async function send(apiUrl: string, path: string, opts: RequestOptions = {}): Promise<Response> {

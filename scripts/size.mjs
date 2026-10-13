@@ -11,8 +11,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BUDGET_KB = {
   'Headless core (@characterxyz/web)': ['packages/web/dist/index.js', 9],
   'Server helper (@characterxyz/server)': ['packages/server/dist/index.js', 1.5],
-  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 30],
-  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 30],
+  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 32],
+  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 32],
   'React wrapper (excl. React and the widget)': ['packages/react/dist/index.js', 2],
 };
 

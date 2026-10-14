@@ -11,8 +11,10 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BUDGET_KB = {
   'Headless core (@characterxyz/web)': ['packages/web/dist/index.js', 9],
   'Server helper (@characterxyz/server)': ['packages/server/dist/index.js', 1.5],
-  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 32],
-  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 32],
+  // 33 since 2026-10-14 (was 32): the window's labels became a table so the
+  // server can send them in the visitor's language (+0.5 KB). Decided, not drifted.
+  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 33],
+  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 33],
   'React wrapper (excl. React and the widget)': ['packages/react/dist/index.js', 2],
 };
 

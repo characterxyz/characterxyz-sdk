@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { applyLayer, DEFAULTS, fromAttributes, safeColor, safeFont } from './config.js';
-import { blocks, clock, endCopy, eta, inline, ordinal } from './format.js';
+import { blocks, clock, inline, ordinal } from './format.js';
+import { ENGLISH, ending, place as linePlace, setStrings, t, wait } from './strings.js';
 import { CLOSE_UP, faceOf, MEDIUM, place } from './framing.js';
 
 describe('config layers', () => {
@@ -42,9 +43,10 @@ describe('copy and formatting', () => {
   });
 
   it('ETA and clock read naturally', () => {
-    expect(eta(30)).toBe('less than a minute');
-    expect(eta(180)).toBe('about 3 min');
-    expect(eta(5400)).toBe('about 2 hr');
+    expect(wait(30)).toBe('less than a minute');
+    expect(wait(180)).toBe('about 3 min');
+    expect(wait(5400)).toBe('about 2 hr');
+    expect(wait(null)).toBe('');
     expect(clock(7)).toBe('0:07');
     expect(clock(192)).toBe('3:12');
     expect(clock(3723)).toBe('1:02:03');
@@ -52,9 +54,30 @@ describe('copy and formatting', () => {
 
   it('every end reason has words for the visitor', () => {
     for (const r of ['hangup', 'left', 'missed', 'timeout', 'limit', 'busy', 'mic-denied', 'credits', 'unavailable', 'failed', null]) {
-      const c = endCopy(r, 'Ananya');
+      const c = ending(r, 'Ananya');
       expect(c.title.length).toBeGreaterThan(3);
       expect(c.body.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('labels fill their placeholders, and a language from the server replaces English', () => {
+    expect(t('chatWith', { name: 'Ananya' })).toBe('Chat with Ananya');
+    expect(linePlace(2)).toBe('2nd');
+    setStrings({ send: 'भेजें', chatWith: '{name} से बात करें' });
+    expect(t('send')).toBe('भेजें');
+    expect(t('chatWith', { name: 'Ananya' })).toBe('Ananya से बात करें');
+    // A key the server did not send stays English; places become plain numbers.
+    expect(t('close')).toBe('Close');
+    expect(linePlace(2)).toBe('2');
+    setStrings(null);
+    expect(t('send')).toBe('Send');
+    expect(linePlace(2)).toBe('2nd');
+  });
+
+  it('every label is non-empty and every placeholder is a known one', () => {
+    for (const [key, text] of Object.entries(ENGLISH)) {
+      expect(text.length, key).toBeGreaterThan(0);
+      for (const ph of text.match(/\{[a-z]+\}/g) ?? []) expect(['{name}', '{position}', '{eta}', '{seconds}', '{time}', '{text}', '{n}', '{brand}']).toContain(ph);
     }
   });
 

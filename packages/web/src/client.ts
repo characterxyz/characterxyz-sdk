@@ -107,7 +107,11 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
     if (refresh) this.openingP = null;
     this.openingP ??= this.session
       .token()
-      .then((token) => request<Opening>(this.apiUrl, '/sdk/v1/agent/opening', { token }))
+      .then((token) => {
+        const locale = typeof navigator === 'undefined' ? '' : navigator.language || '';
+        const path = locale ? `/sdk/v1/agent/opening?locale=${encodeURIComponent(locale)}` : '/sdk/v1/agent/opening';
+        return request<Opening>(this.apiUrl, path, { token });
+      })
       .catch(() => null);
     return this.openingP;
   }

@@ -2,8 +2,9 @@ import type { Call, CallState, Caption, CharacterXYZ, ChatMessage, ContactDetail
 import { Fragment, type ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
-import type { WidgetConfig } from './config.js';
-import { blocks, clock, endCopy, eta, ordinal, type Inline } from './format.js';
+import { DEFAULTS, type WidgetConfig } from './config.js';
+import { blocks, clock, type Inline } from './format.js';
+import { ending, place, setStrings, t, wait } from './strings.js';
 import { CLOSE_UP, FULL_BODY, HALF_BODY, MEDIUM } from './framing.js';
 import { extractContact, type TypedContact } from './contact.js';
 import { BackIcon, ChatIcon, CheckIcon, CloseIcon, HangUpIcon, MicIcon, MicOffIcon, NewChatIcon, PhoneIcon, RetryIcon, SendIcon } from './icons.js';
@@ -150,11 +151,11 @@ function Text({ parts }: { parts: Inline[] }) {
   );
 }
 
-const LABELS: Record<string, { label: string; type: string; auto: string }> = {
-  name: { label: 'Name', type: 'text', auto: 'name' },
-  email: { label: 'Email', type: 'email', auto: 'email' },
-  phone: { label: 'Phone', type: 'tel', auto: 'tel' },
-  company: { label: 'Company', type: 'text', auto: 'organization' },
+const LABELS: Record<string, { label: 'nameField' | 'emailField' | 'phoneField' | 'companyField'; type: string; auto: string }> = {
+  name: { label: 'nameField', type: 'text', auto: 'name' },
+  email: { label: 'emailField', type: 'email', auto: 'email' },
+  phone: { label: 'phoneField', type: 'tel', auto: 'tel' },
+  company: { label: 'companyField', type: 'text', auto: 'organization' },
 };
 
 /** The contact card: a few fields in the chat, skippable, sending is the consent. */
@@ -202,7 +203,7 @@ function DetailsCard({
         } catch (err) {
           const fields = (err as { fields?: Record<string, string> }).fields ?? {};
           if (Object.keys(fields).length) setErrors(fields);
-          else setFailed((err as Error).message || 'Could not send. Try again.');
+          else setFailed((err as Error).message || t('sendFailed'));
         } finally {
           setSending(false);
         }
@@ -215,8 +216,8 @@ function DetailsCard({
         return (
           <label class="card__field" key={f}>
             <span>
-              {spec.label}
-              {f === 'phone' || f === 'company' ? <i> · optional</i> : null}
+              {t(spec.label)}
+              {f === 'phone' || f === 'company' ? <i> · {t('optional')}</i> : null}
             </span>
             <input
               ref={i === 0 ? first : undefined}
@@ -238,7 +239,7 @@ function DetailsCard({
           <Fragment>
             {' '}
             <a href={form.privacyUrl} target="_blank" rel="noopener noreferrer">
-              Privacy policy
+              {t('privacyPolicy')}
             </a>
           </Fragment>
         ) : null}
@@ -246,7 +247,7 @@ function DetailsCard({
       {failed ? <div class="card__failed">{failed}</div> : null}
       <div class="card__actions">
         <button type="submit" class="btn btn--accent btn--sm" disabled={sending}>
-          {sending ? 'Sending…' : 'Send'}
+          {sending ? t('sending') : t('send')}
         </button>
         <button type="button" class="btn btn--ghost btn--sm" onClick={onSkip} disabled={sending}>
           {skipLabel}
@@ -308,7 +309,7 @@ export function App({ client, config, bind, onView }: AppProps) {
   const input = useRef<HTMLTextAreaElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const subtitle = config.subtitle ?? agent.tagline;
-  const name = agent.name || 'Assistant';
+  const name = agent.name || t('assistant');
 
   // HOW SHE OPENS is hers: written by the agent from her persona and the
   // key's product knowledge (server-cached), fetched once per page so the
@@ -318,14 +319,18 @@ export function App({ client, config, bind, onView }: AppProps) {
   useEffect(() => {
     if (!canChat) return;
     let live = true;
-    void client.opening().then((o) => live && setOpening(o));
+    void client.opening().then((o) => {
+      if (!live) return;
+      setStrings(o?.strings);
+      setOpening(o);
+    });
     return () => {
       live = false;
     };
   }, [client, canChat]);
   const teaser = config.greeting || opening?.teaser || '';
   const starters = config.suggestions.length ? config.suggestions : (opening?.suggestions ?? []);
-  const firstLine = opening?.greeting || `Hi, I'm ${name}. How can I help you today?`;
+  const firstLine = opening?.greeting || t('greetingDefault', { name });
 
   // Her first message waits for the history (a returning visitor has one) and
   // then for a short typing beat, so it arrives like a message, not a label.
@@ -569,7 +574,7 @@ export function App({ client, config, bind, onView }: AppProps) {
             {teaser}
             <button
               class="greeting__close"
-              aria-label="Dismiss"
+              aria-label={t('dismiss')}
               onClick={(e) => {
                 e.stopPropagation();
                 setGreeting(false);
@@ -586,11 +591,11 @@ export function App({ client, config, bind, onView }: AppProps) {
           aria-label={
             inLine
               ? phase === 'queued'
-                ? `You are ${ordinal(state?.position ?? 1)} in line to call ${name}. Open`
-                : `Back to your call with ${name}`
+                ? t('inLineToCall', { position: place(state?.position ?? 1), name })
+                : t('backToCallWith', { name })
               : canChat
-                ? `Chat with ${name}`
-                : `Call ${name}`
+                ? t('chatWith', { name })
+                : t('callName', { name })
           }
           onClick={() => open(inLine || !canChat ? 'call' : 'chat')}
         >
@@ -611,29 +616,29 @@ export function App({ client, config, bind, onView }: AppProps) {
           ) : null}
           {config.launcher === 'bubble' && !greeting ? (
             <span class="presence__label" aria-hidden="true">
-              {inLine ? (phase === 'queued' ? `${ordinal(state?.position ?? 1)} in line` : 'Back to your call') : canChat ? `Chat with ${name}` : `Call ${name}`}
+              {inLine ? (phase === 'queued' ? t('inLine', { position: place(state?.position ?? 1) }) : t('backToCall')) : canChat ? t('chatWith', { name }) : t('callName', { name })}
             </span>
           ) : null}
         </button>
         {config.launcher === 'bubble' ? null : (
         <div class={`acts ${labelled ? 'acts--labelled' : ''}`} part="actions">
           {canChat ? (
-            <button class="act" aria-label={`Chat with ${name}`} onClick={() => open('chat')}>
+            <button class="act" aria-label={t('chatWith', { name })} onClick={() => open('chat')}>
               <ChatIcon size={20} />
               <span class="act__label" aria-hidden="true">
-                Chat
+                {t('chat')}
               </span>
             </button>
           ) : null}
           {canCall ? (
             <button
               class={`act act--call ${inLine ? 'act--live' : ''}`}
-              aria-label={inLine ? (phase === 'queued' ? `You are ${ordinal(state?.position ?? 1)} in line. Open your call` : 'Back to your call') : `Call ${name}`}
+              aria-label={inLine ? (phase === 'queued' ? t('inLineOpen', { position: place(state?.position ?? 1) }) : t('backToCall')) : t('callName', { name })}
               onClick={() => (inLine ? open('call') : beginCall())}
             >
               <PhoneIcon size={20} />
               <span class="act__label" aria-hidden="true">
-                {inLine ? (phase === 'queued' ? `${ordinal(state?.position ?? 1)} in line` : 'On call') : 'Call'}
+                {inLine ? (phase === 'queued' ? t('inLine', { position: place(state?.position ?? 1) }) : t('onCall')) : t('call')}
               </span>
               {phase === 'queued' ? (
                 <span class="act__badge" aria-hidden="true">
@@ -658,20 +663,20 @@ export function App({ client, config, bind, onView }: AppProps) {
         <div class="head__name">{name}</div>
         <div class="head__sub">
           <i />
-          {busy ? 'Typing…' : subtitle || 'Online'}
+          {busy ? t('typing') : subtitle || t('online')}
         </div>
       </div>
       {view === 'chat' && messages.length > 0 && !busy ? (
-        <button class="icon-btn" aria-label="Start a new conversation" title="Start a new conversation" onClick={() => void startOver()}>
+        <button class="icon-btn" aria-label={t('newConversation')} title={t('newConversation')} onClick={() => void startOver()}>
           <NewChatIcon />
         </button>
       ) : null}
       {canCall && view === 'chat' ? (
-        <button class="icon-btn icon-btn--accent" aria-label={`Call ${name}`} title={`Call ${name}`} onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
+        <button class="icon-btn icon-btn--accent" aria-label={t('callName', { name })} title={t('callName', { name })} onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
           <PhoneIcon size={18} />
         </button>
       ) : null}
-      <button class="icon-btn" aria-label="Close" onClick={close}>
+      <button class="icon-btn" aria-label={t('close')} onClick={close}>
         <CloseIcon />
       </button>
     </div>
@@ -679,18 +684,18 @@ export function App({ client, config, bind, onView }: AppProps) {
 
   if (view === 'chat') {
     return (
-      <div class={`panel ${closing ? 'is-closing' : ''}`} part="panel" role="dialog" aria-label={`Chat with ${name}`}>
+      <div class={`panel ${closing ? 'is-closing' : ''}`} part="panel" role="dialog" aria-label={t('chatWith', { name })}>
         {head}
         {call && (phase === 'queued' || phase === 'ready') ? (
           <div class="banner" part="banner" role="status">
             <div class="banner__text">
               {phase === 'queued' ? (
                 <Fragment>
-                  You're <b>{ordinal(state?.position ?? 1)}</b> in line for a call · {eta(state?.etaSeconds ?? null)}
+                  {t('inLineFor', { position: place(state?.position ?? 1), eta: wait(state?.etaSeconds ?? null) })}
                 </Fragment>
               ) : (
                 <Fragment>
-                  <b>{name} is ready for you</b> · {state?.holdSeconds ?? 30}s to join
+                  <b>{t('readyForYou', { name })}</b> · {t('secondsToJoin', { seconds: state?.holdSeconds ?? 30 })}
                 </Fragment>
               )}
             </div>
@@ -702,11 +707,11 @@ export function App({ client, config, bind, onView }: AppProps) {
                   setView('call');
                 }}
               >
-                Join
+                {t('join')}
               </button>
             ) : (
               <button class="btn" onClick={() => setView('call')}>
-                View
+                {t('view')}
               </button>
             )}
           </div>
@@ -722,7 +727,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                 {subtitle ? <div class="empty__body">{subtitle}</div> : null}
               </div>
               {history === 'loading' ? null : !greeted ? (
-                <div class="msg msg--agent typing" aria-label={`${name} is typing`}>
+                <div class="msg msg--agent typing" aria-label={t('typingName', { name })}>
                   <i />
                   <i />
                   <i />
@@ -736,7 +741,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                     <QuickReplies items={starters} onPick={(q) => void sendText(q)}>
                       {canCall ? (
                         <button class="chip chip--call" onClick={() => (call && phase !== 'ended' ? setView('call') : beginCall())}>
-                          <PhoneIcon size={14} /> Call {name}
+                          <PhoneIcon size={14} /> {t('callName', { name })}
                         </button>
                       ) : null}
                     </QuickReplies>
@@ -747,7 +752,7 @@ export function App({ client, config, bind, onView }: AppProps) {
           ) : null}
           {messages.map((m) =>
             m.role === 'agent' && m.streaming && !m.text ? (
-              <div class="msg msg--agent typing" key={m.id} aria-label={`${name} is typing`}>
+              <div class="msg msg--agent typing" key={m.id} aria-label={t('typingName', { name })}>
                 <i />
                 <i />
                 <i />
@@ -766,7 +771,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                   </div>
                 ) : m.failed ? (
                   <button class="msg__retry" onClick={() => void client.chat.retry(m.id).catch(() => {})}>
-                    <RetryIcon /> Not sent · Retry
+                    <RetryIcon /> {t('notSent')}
                   </button>
                 ) : null}
               </Fragment>
@@ -789,17 +794,17 @@ export function App({ client, config, bind, onView }: AppProps) {
                   key={card.kind === 'invited' ? lastMsg?.id : card.kind}
                   form={card.form}
                   initial={card.initial}
-                  title={card.kind === 'call' ? `Before you call ${name}` : card.kind === 'typed' ? 'Confirm your details' : 'Leave your details'}
-                  note={card.kind === 'call' ? 'So the team can follow up, even if the line drops.' : card.kind === 'typed' ? 'From what you typed. Check them and send.' : null}
+                  title={card.kind === 'call' ? t('beforeYouCall', { name }) : card.kind === 'typed' ? t('confirmDetails') : t('leaveDetails')}
+                  note={card.kind === 'call' ? t('detailsWhy') : card.kind === 'typed' ? t('detailsTyped') : null}
                   onSend={sendDetails}
                   onSkip={skipDetails}
-                  skipLabel={card.kind === 'call' ? 'Skip and call' : 'Not now'}
+                  skipLabel={card.kind === 'call' ? t('skipAndCall') : t('notNow')}
                 />
               );
             }
             return detailsDone === 'sent' ? (
               <div class="notice" role="status">
-                <CheckIcon /> {sentName ? `Thanks, ${sentName}. ` : 'Thanks. '}The team will be in touch.
+                <CheckIcon /> {sentName ? t('thanksName', { name: sentName }) : t('thanks')}
               </div>
             ) : null;
           })()}
@@ -818,8 +823,8 @@ export function App({ client, config, bind, onView }: AppProps) {
               rows={1}
               value={draft}
               maxLength={2000}
-              placeholder={config.placeholder}
-              aria-label="Message"
+              placeholder={config.placeholder === DEFAULTS.placeholder ? t('message') : config.placeholder}
+              aria-label={t('message')}
               onInput={(e) => {
                 const t = e.currentTarget;
                 setDraft(t.value);
@@ -833,17 +838,23 @@ export function App({ client, config, bind, onView }: AppProps) {
                 }
               }}
             />
-            <button class="send" type="submit" aria-label="Send" disabled={!draft.trim() || busy}>
+            <button class="send" type="submit" aria-label={t('send')} disabled={!draft.trim() || busy}>
               <SendIcon />
             </button>
           </div>
         </form>
         {config.branding ? (
           <div class="foot">
-            Powered by{' '}
-            <a href="https://character.xyz" target="_blank" rel="noopener noreferrer">
-              Character XYZ
-            </a>
+            {t('poweredBy').split('{brand}').map((part, i) => (
+              <Fragment key={i}>
+                {i ? (
+                  <a href="https://character.xyz" target="_blank" rel="noopener noreferrer">
+                    Character XYZ
+                  </a>
+                ) : null}
+                {part}
+              </Fragment>
+            ))}
           </div>
         ) : null}
       </div>
@@ -858,12 +869,12 @@ export function App({ client, config, bind, onView }: AppProps) {
   const C = 2 * Math.PI * R;
   const remaining = s?.maxSeconds ? s.maxSeconds - elapsed : null;
   const agentState = s?.agentState ?? 'idle';
-  const status = s?.speaking ? 'Speaking' : agentState === 'thinking' ? 'Thinking…' : 'Listening';
+  const status = s?.speaking ? t('speaking') : agentState === 'thinking' ? t('thinking') : t('listening');
   const ended = !s || phase === 'ended' || phase === 'idle';
-  const copy = endCopy(s?.endReason ?? null, name);
+  const copy = ending(s?.endReason ?? null, name);
 
   return (
-    <div class={`panel ${closing ? 'is-closing' : ''}`} part="panel" role="dialog" aria-label={`Call with ${name}`}>
+    <div class={`panel ${closing ? 'is-closing' : ''}`} part="panel" role="dialog" aria-label={t('callWith', { name })}>
       <div class={`stage ${wantsFace && faceStatus === 'ready' ? 'stage--face' : ''}`} ref={stage}>
         <div class="stage__figure" style={{ opacity: phase === 'queued' ? 0.35 : 1, transition: 'opacity .6s' }}>
           <Portrait agent={agent} shot={MEDIUM} talking={!!s?.speaking} />
@@ -877,20 +888,20 @@ export function App({ client, config, bind, onView }: AppProps) {
         <div class="stage__veil" />
         <div class="stage__top">
           {phase === 'live' ? (
-            <span class={`badge ${remaining != null && remaining <= 60 ? 'badge--warn' : ''}`} role="timer" aria-label="Call time">
+            <span class={`badge ${remaining != null && remaining <= 60 ? 'badge--warn' : ''}`} role="timer" aria-label={t('callTime')}>
               <i />
-              {remaining != null && remaining <= 60 ? `${clock(remaining)} left` : clock(elapsed)}
+              {remaining != null && remaining <= 60 ? t('timeLeft', { time: clock(remaining) }) : clock(elapsed)}
             </span>
           ) : (
             <span />
           )}
           <div style={{ display: 'flex', gap: '6px' }}>
             {canChat ? (
-              <button class="icon-btn" aria-label="Chat" title="Chat" onClick={() => open('chat')}>
+              <button class="icon-btn" aria-label={t('chat')} title={t('chat')} onClick={() => open('chat')}>
                 <ChatIcon size={18} />
               </button>
             ) : null}
-            <button class="icon-btn" aria-label="Minimise" onClick={close}>
+            <button class="icon-btn" aria-label={t('minimise')} onClick={close}>
               <CloseIcon />
             </button>
           </div>
@@ -901,31 +912,29 @@ export function App({ client, config, bind, onView }: AppProps) {
             <Fragment>
               <div class="stage__name">{name}</div>
               <div class="stage__status">
-                <span class="spinner" /> {phase === 'joining' ? 'Connecting…' : 'Joining…'}
+                <span class="spinner" /> {phase === 'joining' ? t('connecting') : t('joining')}
               </div>
             </Fragment>
           ) : null}
 
           {phase === 'queued' ? (
             <Fragment>
-              <div class="line" role="status" aria-label={`You are ${ordinal(position)} in line, ${eta(s?.etaSeconds ?? null)}`}>
+              <div class="line" role="status" aria-label={t('inLineEta', { position: place(position), eta: wait(s?.etaSeconds ?? null) })}>
                 <svg width="168" height="168" viewBox="0 0 168 168">
                   <circle class="line__track" cx="84" cy="84" r={R} fill="none" stroke-width="7" />
                   <circle class="line__fill" cx="84" cy="84" r={R} fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray={C} stroke-dashoffset={C * (1 - Math.max(0.06, progress))} />
                 </svg>
                 <div>
-                  <div class="line__num">{ordinal(position)}</div>
-                  <div class="line__lbl">in line</div>
+                  <div class="line__num">{place(position)}</div>
+                  <div class="line__lbl">{t('lineLabel')}</div>
                 </div>
               </div>
-              <div class="title">{name} is on other calls</div>
-              <div class="note">
-                Your turn in {eta(s?.etaSeconds ?? null)}. We'll chime when it's time{canChat ? ', so feel free to keep chatting.' : '.'}
-              </div>
+              <div class="title">{t('onOtherCalls', { name })}</div>
+              <div class="note">{t(canChat ? 'yourTurnChat' : 'yourTurn', { eta: wait(s?.etaSeconds ?? null) })}</div>
               <div class="btn-row">
                 {canChat ? (
                   <button class="btn btn--accent" onClick={() => open('chat')}>
-                    <ChatIcon size={18} /> Keep chatting
+                    <ChatIcon size={18} /> {t('keepChatting')}
                   </button>
                 ) : null}
                 <button
@@ -934,7 +943,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                     void call?.hangUp();
                   }}
                 >
-                  Leave line
+                  {t('leaveLine')}
                 </button>
               </div>
             </Fragment>
@@ -942,10 +951,10 @@ export function App({ client, config, bind, onView }: AppProps) {
 
           {phase === 'ready' ? (
             <Fragment>
-              <div class="title">{name} is ready for you</div>
-              <div class="note">Join within {s?.holdSeconds ?? 30} seconds.</div>
+              <div class="title">{t('readyForYou', { name })}</div>
+              <div class="note">{t('joinWithin', { seconds: s?.holdSeconds ?? 30 })}</div>
               <button class="btn btn--accent btn--glow" onClick={() => call?.accept()}>
-                <PhoneIcon size={18} /> Join call
+                <PhoneIcon size={18} /> {t('joinCall')}
               </button>
             </Fragment>
           ) : null}
@@ -961,34 +970,34 @@ export function App({ client, config, bind, onView }: AppProps) {
                     ))}
                   </span>
                 ) : null}
-                {s?.muted ? 'You are muted' : status}
+                {s?.muted ? t('muted') : status}
               </div>
               <div class="captions">
                 {captions.slice(-2).map((c, i, arr) => (
                   <div key={c.id} class={`captions__line ${i === arr.length - 1 ? 'captions__line--now' : ''}`}>
-                    {c.role === 'visitor' ? `You: ${c.text}` : c.text}
+                    {c.role === 'visitor' ? t('you', { text: c.text }) : c.text}
                   </div>
                 ))}
               </div>
               <div class="controls">
                 <div class="ctl">
-                  <button class={`round ${s?.muted ? 'round--on' : ''}`} aria-pressed={s?.muted} aria-label={s?.muted ? 'Unmute' : 'Mute'} onClick={() => call?.setMuted(!s?.muted)}>
+                  <button class={`round ${s?.muted ? 'round--on' : ''}`} aria-pressed={s?.muted} aria-label={s?.muted ? t('unmute') : t('mute')} onClick={() => call?.setMuted(!s?.muted)}>
                     {s?.muted ? <MicOffIcon size={22} /> : <MicIcon size={22} />}
                   </button>
-                  <span class="round__label">{s?.muted ? 'Unmute' : 'Mute'}</span>
+                  <span class="round__label">{s?.muted ? t('unmute') : t('mute')}</span>
                 </div>
                 <div class="ctl">
-                  <button class="round round--end" aria-label="End call" onClick={() => void call?.hangUp()}>
+                  <button class="round round--end" aria-label={t('endCall')} onClick={() => void call?.hangUp()}>
                     <HangUpIcon size={26} />
                   </button>
-                  <span class="round__label">End</span>
+                  <span class="round__label">{t('end')}</span>
                 </div>
                 {s?.speaking ? (
                   <div class="ctl">
-                    <button class="round" aria-label={`Interrupt ${name}`} onClick={() => call?.interrupt()}>
+                    <button class="round" aria-label={t('interruptName', { name })} onClick={() => call?.interrupt()}>
                       <BackIcon size={22} />
                     </button>
-                    <span class="round__label">Interrupt</span>
+                    <span class="round__label">{t('interrupt')}</span>
                   </div>
                 ) : null}
               </div>
@@ -997,8 +1006,8 @@ export function App({ client, config, bind, onView }: AppProps) {
 
           {ended ? (
             <Fragment>
-              <div class="title">{s ? copy.title : `Call ${name}`}</div>
-              <div class="note">{s ? (s.endReason === 'hangup' && elapsed ? `${clock(elapsed)} · ${copy.body}` : s.error ?? copy.body) : `Talk with ${name} in real time.`}</div>
+              <div class="title">{s ? copy.title : t('callName', { name })}</div>
+              <div class="note">{s ? (s.endReason === 'hangup' && elapsed ? `${clock(elapsed)} · ${copy.body}` : s.error ?? copy.body) : t('talkWith', { name })}</div>
               <div class="btn-row">
                 {canCall && s?.endReason !== 'credits' && s?.endReason !== 'unavailable' && s?.endReason !== 'daily_limit' ? (
                   <button
@@ -1008,12 +1017,12 @@ export function App({ client, config, bind, onView }: AppProps) {
                       void startCall();
                     }}
                   >
-                    <PhoneIcon size={18} /> {s ? 'Call again' : 'Start call'}
+                    <PhoneIcon size={18} /> {s ? t('callAgain') : t('startCall')}
                   </button>
                 ) : null}
                 {canChat ? (
                   <button class="btn" onClick={() => open('chat')}>
-                    <ChatIcon size={18} /> Chat
+                    <ChatIcon size={18} /> {t('chat')}
                   </button>
                 ) : null}
               </div>

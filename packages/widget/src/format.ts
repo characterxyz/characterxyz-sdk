@@ -14,15 +14,6 @@ export function ordinal(n: number): string {
   }
 }
 
-/** "less than a minute", "about 1 min", "about 4 min", "about 1 hr". */
-export function eta(seconds: number | null): string {
-  if (seconds == null) return '';
-  if (seconds < 60) return 'less than a minute';
-  const m = Math.round(seconds / 60);
-  if (m < 60) return `about ${m} min`;
-  return `about ${Math.round(m / 60)} hr`;
-}
-
 /** 0:07, 3:12, 1:02:03 */
 export function clock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -30,35 +21,6 @@ export function clock(totalSeconds: number): string {
   const m = Math.floor((s % 3600) / 60);
   const ss = String(s % 60).padStart(2, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
-}
-
-/** What a visitor is told when a call could not happen or ended. */
-export function endCopy(reason: string | null, name: string): { title: string; body: string } {
-  switch (reason) {
-    case 'hangup':
-      return { title: 'Call ended', body: `Thanks for talking with ${name}.` };
-    case 'left':
-      return { title: 'You left the line', body: 'You can call again whenever you like.' };
-    case 'missed':
-      return { title: 'You missed your turn', body: `${name} was ready, but the call wasn't joined in time.` };
-    case 'timeout':
-      return { title: 'Still busy', body: `Sorry for the wait. ${name} is still on other calls. Chat is open meanwhile.` };
-    case 'limit':
-      return { title: 'Time is up', body: 'This call reached its time limit.' };
-    case 'busy':
-      return { title: 'All lines are busy', body: 'Try again in a few minutes, or keep chatting.' };
-    case 'mic-denied':
-      return { title: 'Microphone needed', body: 'Allow the microphone in your browser to talk, or keep chatting.' };
-    case 'silence':
-      return { title: 'Call ended', body: `The line was quiet for a minute, so ${name} hung up. Call again any time.` };
-    case 'daily_limit':
-      return { title: 'Calls are resting', body: 'Calls are done for today. Chat is open.' };
-    case 'credits':
-    case 'unavailable':
-      return { title: 'Calls are unavailable', body: 'Calls are not available right now. Chat is open.' };
-    default:
-      return { title: 'The call dropped', body: 'Something interrupted the call. Try again.' };
-  }
 }
 
 /**

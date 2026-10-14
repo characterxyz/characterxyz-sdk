@@ -99,6 +99,10 @@ export interface Opening {
   suggestions: string[];
   /** The contact card to offer before a call; null when nothing receives leads or this conversation was asked. */
   details?: DetailsForm | null;
+  /** The language she wrote it in, when the plan localizes and the browser is not English. */
+  locale?: string;
+  /** The chat window's labels in that language, by key (see the widget's `strings.ts`). */
+  strings?: Record<string, string>;
 }
 
 export type CallPhase =

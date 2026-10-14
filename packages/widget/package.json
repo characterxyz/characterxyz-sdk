@@ -1,6 +1,6 @@
 {
   "name": "@characterxyz/widget",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Character XYZ in any site: the agent in the corner with chat and voice calls. One script tag, or a Web Component.",
   "license": "MIT",
   "type": "module",

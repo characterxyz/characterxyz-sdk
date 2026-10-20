@@ -33,6 +33,8 @@ export type Shot =
       faceFraction: number;
       /** Where the face centre lands in the box, 0..1. */
       at: { x: number; y: number };
+      /** Move down rather than cut the top of her head. A round close-up crops around the face on purpose. */
+      keepCrown?: boolean;
     }
   /** The whole clip, its height filling the box, centred on her face — standing. */
   | { fit: 'height' };
@@ -40,11 +42,16 @@ export type Shot =
 /** The corner portrait: a close-up. */
 export const CLOSE_UP = { faceFraction: 0.26, at: { x: 0.5, y: 0.5 } } satisfies Shot;
 /** The call card: head and shoulders with room above. */
-export const MEDIUM = { faceFraction: 0.14, at: { x: 0.5, y: 0.34 } } satisfies Shot;
+export const MEDIUM = { faceFraction: 0.14, at: { x: 0.5, y: 0.34 }, keepCrown: true } satisfies Shot;
 /** The launcher's half body: head to waist, her face high in the frame. */
-export const HALF_BODY = { faceFraction: 0.16, at: { x: 0.5, y: 0.22 } } satisfies Shot;
+export const HALF_BODY = { faceFraction: 0.16, at: { x: 0.5, y: 0.22 }, keepCrown: true } satisfies Shot;
 /** The launcher's full body: the whole figure, standing on the box's bottom edge. */
 export const FULL_BODY = { fit: 'height' } satisfies Shot;
+
+/** Face centre to the top of the head, hair included, in eyes-to-chin spans. */
+export const CROWN = 1.8;
+/** The gap kept above her head, as a fraction of the box height. */
+export const HEADROOM = 0.04;
 
 export interface Placement {
   width: number;
@@ -61,10 +68,13 @@ export function place(face: Face, mediaAspect: number, boxW: number, boxH: numbe
   }
   const height = (boxH * shot.faceFraction) / face.span;
   const width = height * mediaAspect;
-  return {
-    width,
-    height,
-    left: boxW * shot.at.x - face.cx * width,
-    top: boxH * shot.at.y - face.cy * height,
-  };
+  let top = boxH * shot.at.y - face.cy * height;
+  // ⚠ KEEP HER CROWN IN THE BOX. The half body put her face centre 22% down
+  // with eyes-to-chin at 16% of the box, which lands the top of her head (and
+  // her hair) above the top edge: "half cuts the top of the head" (2026-10-20).
+  // The crown sits about CROWN face-spans above the face centre; a shot that
+  // keeps the crown and would cut it is moved down until it clears HEADROOM.
+  const crown = top + (face.cy - face.span * CROWN) * height;
+  if (shot.keepCrown && crown < boxH * HEADROOM) top += boxH * HEADROOM - crown;
+  return { width, height, left: boxW * shot.at.x - face.cx * width, top };
 }

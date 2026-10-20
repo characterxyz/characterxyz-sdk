@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { applyLayer, DEFAULTS, fromAttributes, safeColor, safeFont } from './config.js';
 import { blocks, clock, inline, ordinal } from './format.js';
 import { ENGLISH, ending, place as linePlace, setStrings, t, wait } from './strings.js';
-import { CLOSE_UP, faceOf, MEDIUM, place } from './framing.js';
+import { CLOSE_UP, CROWN, faceOf, HALF_BODY, HEADROOM, MEDIUM, place } from './framing.js';
 
 describe('config layers', () => {
   it('takes valid values and drops the rest', () => {
@@ -126,6 +126,16 @@ describe('framing', () => {
     const p = place(f, 0.75, 392, 600, MEDIUM);
     expect(p.top + f.cy * p.height).toBeCloseTo(600 * MEDIUM.at.y, 5);
     expect(p.height).toBeGreaterThan(600);
+  });
+
+  it('the half body keeps the top of her head in the box (it used to cut it)', () => {
+    const f = faceOf(video, 1792, 2400);
+    for (const [w, h] of [[128, 170], [104, 138]] as const) {
+      const p = place(f, 1792 / 2400, w, h, HALF_BODY);
+      const crown = p.top + (f.cy - f.span * CROWN) * p.height;
+      expect(crown).toBeGreaterThanOrEqual(h * HEADROOM - 1e-9);
+      expect(f.span * p.height).toBeCloseTo(h * HALF_BODY.faceFraction, 5);
+    }
   });
 
   it('falls back sensibly without face data', () => {

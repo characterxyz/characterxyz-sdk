@@ -307,6 +307,15 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 /* ------------------------------------------------------------ portrait */
 .portrait { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .portrait__media { position: absolute; max-width: none; transition: opacity .35s ease; user-select: none; -webkit-user-drag: none; }
+.portrait__sparkle { position: absolute; inset: 0; pointer-events: none; transition: opacity .45s ease; }
+.portrait__sparkle.is-done { opacity: 0; }
+.portrait__sparkle i { position: absolute; width: 10px; height: 10px; background: var(--cx-accent); opacity: 0; transform: scale(.4);
+  clip-path: polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%); animation: cx-tw 1.6s ease-in-out infinite; }
+.portrait__sparkle i:nth-child(1) { left: 36%; top: 28% }
+.portrait__sparkle i:nth-child(2) { left: 58%; top: 44%; animation-delay: .5s }
+.portrait__sparkle i:nth-child(3) { left: 44%; top: 60%; animation-delay: 1s }
+@keyframes cx-tw { 50% { opacity: .8; transform: scale(1) } }
+@media (prefers-reduced-motion: reduce) { .portrait__sparkle i { animation: none; opacity: .45; } }
 .portrait--initial { display: grid; place-items: center; font-size: 26px; font-weight: 700; color: var(--cx-accent); }
 
 /* ------------------------------------------------------------ test-mode ribbon */

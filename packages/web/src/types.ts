@@ -16,10 +16,20 @@ export interface VideoClip {
   /** H.264 MP4, colour | matte side by side (Safari, with a canvas unpack). */
   packedUrl: string | null;
   seconds: number | null;
+  /** The same clip at 960 px tall, for the launcher; present once the server has made it. */
+  smallUrl?: string | null;
 }
 
 export interface VideoCharacter {
-  anchor: { url: string | null; alphaUrl: string | null } | null;
+  anchor: {
+    url: string | null;
+    alphaUrl: string | null;
+    /** The cut-out still at 960 px tall (WebP), for the launcher. */
+    smallUrl?: string | null;
+    /** The full still's size: the face landmarks are in its pixels, not the copy's. */
+    width?: number;
+    height?: number;
+  } | null;
   clips: Partial<Record<'idle' | 'talking' | 'listening' | 'entrance', VideoClip>>;
   /** Where the face is, in the anchor still's pixels. */
   face: {

@@ -877,7 +877,7 @@ export function App({ client, config, bind, onView }: AppProps) {
     <div class={`panel ${closing ? 'is-closing' : ''}`} part="panel" role="dialog" aria-label={t('callWith', { name })}>
       <div class={`stage ${wantsFace && faceStatus === 'ready' ? 'stage--face' : ''}`} ref={stage}>
         <div class="stage__figure" style={{ opacity: phase === 'queued' ? 0.35 : 1, transition: 'opacity .6s' }}>
-          <Portrait agent={agent} shot={MEDIUM} talking={!!s?.speaking} />
+          <Portrait agent={agent} shot={MEDIUM} talking={!!s?.speaking} full />
           {wantsFace ? (
             <div class={`stage__face ${faceStatus === 'ready' ? 'is-ready' : ''}`}>
               <FaceFrame client={client} call={call} state={s} src={config.faceUrl} onStatus={setFaceStatus} />

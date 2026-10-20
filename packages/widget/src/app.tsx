@@ -550,7 +550,6 @@ export function App({ client, config, bind, onView }: AppProps) {
     }
   };
 
-  const lastAgentStreaming = messages.length > 0 && messages[messages.length - 1]!.role === 'agent' && messages[messages.length - 1]!.streaming;
 
   // Which details card is open, if any — one at a time, and while one is open
   // it is the only thing asking (the suggestion chips step aside).
@@ -657,7 +656,8 @@ export function App({ client, config, bind, onView }: AppProps) {
   const head = (
     <div class="head" part="header">
       <div class="head__face">
-        <Portrait agent={agent} shot={CLOSE_UP} talking={!!lastAgentStreaming} />
+        {/* Idle only: the talking clip is a call's, not a chat's (2026-10-20). */}
+        <Portrait agent={agent} shot={CLOSE_UP} />
       </div>
       <div class="head__who">
         <div class="head__name">{name}</div>

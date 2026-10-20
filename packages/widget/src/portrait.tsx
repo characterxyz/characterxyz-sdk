@@ -61,6 +61,14 @@ export function Portrait({ agent, shot, talking = false, still = false, full = f
   const talkClip = video?.clips.talking ?? idleClip;
   const idle = pick(idleClip?.smallUrl, idleClip?.alphaUrl ?? null, 'idle');
   const talk = pick(talkClip?.smallUrl, talkClip?.alphaUrl ?? null, 'talk') ?? idle;
+  // ⚠ ONLY IDLE UNTIL SHE IS ASKED TO TALK. Both clips used to be created with
+  // preload="auto", so every page that showed the launcher also downloaded the
+  // talking clip. It is created the first time she talks (or with the call
+  // card, which is a call already), and stays once loaded.
+  const [wantTalk, setWantTalk] = useState(full);
+  useEffect(() => {
+    if (talking) setWantTalk(true);
+  }, [talking]);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -115,7 +123,7 @@ export function Portrait({ agent, shot, talking = false, still = false, full = f
           onFail={() => setBroken((b) => ({ ...b, idle: true }))}
         />
       ) : null}
-      {canPlay && talk && talk !== idle ? (
+      {canPlay && wantTalk && talk && talk !== idle ? (
         <Clip
           src={talk}
           style={style}

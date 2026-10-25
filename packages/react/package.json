@@ -1,6 +1,6 @@
 {
   "name": "@characterxyz/react",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "description": "Character XYZ for React: the widget as a component, and hooks over the headless SDK.",
   "license": "MIT",
   "type": "module",

@@ -193,6 +193,10 @@ function DetailsCard({
   hasHistory: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(initial ?? {}) }) as Record<string, string>);
+  // Which fields the card refuses to send without. Older servers send no list,
+  // so name and email stay the floor — the same rule this card always had.
+  const required = form.required ?? ['name', 'email'];
+  const isRequired = (f: string) => required.includes(f as 'name' | 'email' | 'phone' | 'company');
   const reasonOptions = form.reasonOptions ?? [];
   const wantsReason = form.fields.includes('reason');
   // ⚠ THE CONVERSATION OUTRANKS THE PAGE. A `?reason=` left on a link is a
@@ -334,13 +338,13 @@ function DetailsCard({
           <label class="card__field" key={f}>
             <span>
               {label}
-              {f === 'phone' || f === 'company' ? <i> · {t('optional')}</i> : null}
+              {isRequired(f) ? null : <i> · {t('optional')}</i>}
             </span>
             <input
               ref={i === 0 ? first : undefined}
               type={spec.type}
               autocomplete={spec.auto}
-              required={f === 'name' || f === 'email'}
+              required={isRequired(f)}
               maxLength={f === 'email' ? 254 : 120}
               value={values[f] ?? ''}
               aria-invalid={errors[f] ? 'true' : undefined}

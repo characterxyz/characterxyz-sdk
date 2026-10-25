@@ -82,6 +82,12 @@ export interface ChatMessage {
 export interface DetailsForm {
   /** Always `name` and `email`; `phone` and `company` when the key asks for them. */
   fields: ('name' | 'email' | 'phone' | 'company' | 'reason')[];
+  /**
+   * The fields the card refuses to send without. Name and email always; `phone`
+   * only when the author ticked "Phone required" on the Respond node. Older
+   * servers send nothing — fall back to name and email.
+   */
+  required?: ('name' | 'email' | 'phone' | 'company')[];
   /** The brand's privacy policy, linked from the consent line. */
   privacyUrl: string | null;
   /** Shown under the card; sending is the consent. */

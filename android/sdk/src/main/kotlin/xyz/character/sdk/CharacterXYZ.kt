@@ -16,7 +16,7 @@ import java.net.URL
  * is passed in here.
  */
 object CharacterXYZVersion {
-    const val CURRENT = "0.7.3"
+    const val CURRENT = "0.8.0"
 }
 
 data class AgentCard(val id: String, val name: String, val tagline: String)

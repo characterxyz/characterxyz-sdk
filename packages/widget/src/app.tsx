@@ -211,13 +211,24 @@ function DetailsCard({
   const [failed, setFailed] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const first = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     setTimeout(() => first.current?.focus({ preventScroll: true }), 80);
   }, []);
+  // ⚠ THE CARD GROWS when the reason view opens; without this the Send row
+  // slides under the composer. Scroll the chat's own log, never the page.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const log = formRef.current?.closest('.log') as HTMLElement | null;
+      if (log) log.scrollTop = log.scrollHeight;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [editingReason, otherReason]);
   return (
     <form
       class="card"
       part="details"
+      ref={formRef}
       onSubmit={async (e) => {
         e.preventDefault();
         setSending(true);

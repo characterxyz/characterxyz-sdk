@@ -30,12 +30,17 @@ export type {
   CallState,
   Caption,
   ChatMessage,
+  ChatRole,
+  ClientActionCall,
+  ClientActionHandler,
   ContactDetails,
   DetailsForm,
   Features,
   Opening,
   SessionInfo,
+  TrackResult,
   VideoCharacter,
   VideoClip,
+  VisitorIdentity,
 } from './types.js';
 export const VERSION = '0.3.0';

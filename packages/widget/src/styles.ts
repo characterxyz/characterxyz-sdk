@@ -193,6 +193,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .msg--visitor { align-self: flex-end; background: var(--cx-accent); color: var(--cx-accent-ink); border-bottom-right-radius: 6px; }
 .msg--visitor + .msg--visitor, .msg--agent + .msg--agent { margin-top: -2px; }
 .msg--failed { opacity: .65; }
+.event { display: inline-flex; align-items: center; gap: 6px; align-self: center; margin: 2px 0; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--cx-line); background: transparent; color: var(--cx-ink-3); font-size: 11px; letter-spacing: .02em; animation: cx-msg .35s var(--cx-ease) both; }
+.event__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cx-accent); opacity: .8; }
 .msg__retry { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--cx-danger); align-self: flex-end; }
 .msg__why { margin-top: 4px; font-size: 12px; color: var(--cx-ink-2); align-self: flex-end; text-align: right; max-width: 85%; }
 .caret::after { content: ""; display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: -2px; border-radius: 2px; background: currentColor; opacity: .55; animation: cx-blink 1s steps(2) infinite; }

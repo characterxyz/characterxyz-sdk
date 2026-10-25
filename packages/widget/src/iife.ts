@@ -12,6 +12,7 @@
  */
 import { applyLayer, DEFAULTS, fromAttributes } from './config.js';
 import { mount, type MountOptions, type WidgetHandle } from './element.js';
+import type { ClientActionHandler, TrackResult, VisitorIdentity } from '@characterxyz/web';
 
 export { mount };
 
@@ -45,6 +46,10 @@ const api = {
   mount: (o: MountOptions) => (widget = mount(o)),
   open: (v?: 'chat' | 'call') => widget?.open(v),
   close: () => widget?.close(),
+  track: (name: string, data?: Record<string, unknown>, opts?: { id?: string }): Promise<TrackResult> | undefined => widget?.track(name, data, opts),
+  identify: (visitor: VisitorIdentity): Promise<void> | undefined => widget?.identify(visitor),
+  setContext: (context: Record<string, unknown>): Promise<void> | undefined => widget?.setContext(context),
+  registerAction: (name: string, handler: ClientActionHandler): (() => void) | undefined => widget?.registerAction(name, handler),
   get widget() {
     return widget;
   },

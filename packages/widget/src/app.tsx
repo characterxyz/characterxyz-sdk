@@ -448,6 +448,15 @@ export function App({ client, config, bind, onView }: AppProps) {
 
   useEffect(() => bind({ open, close }), [bind, open, close]);
 
+  // A site event the author asked to surface. `openChat` is their call, and it
+  // arrives BEFORE the reply (which may need a page action first), so the panel
+  // opens on the event, not seconds later.
+  useEffect(() => {
+    return client.on('siteEvent', (r) => {
+      if (r.openChat) open('chat');
+    });
+  }, [client, open]);
+
   useEffect(() => {
     if (config.open && canChat) void loadHistory();
   }, [loadHistory, config.open, canChat]);
@@ -813,7 +822,12 @@ export function App({ client, config, bind, onView }: AppProps) {
             </Fragment>
           ) : null}
           {messages.map((m) =>
-            m.role === 'agent' && m.streaming && !m.text ? (
+            m.role === 'event' ? (
+              <div class="event" part="event message message-event" key={m.id}>
+                <span class="event__dot" aria-hidden="true" />
+                {m.text}
+              </div>
+            ) : m.role === 'agent' && m.streaming && !m.text ? (
               <div class="msg msg--agent typing" key={m.id} aria-label={t('typingName', { name })}>
                 <i />
                 <i />

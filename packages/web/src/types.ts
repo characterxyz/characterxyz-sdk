@@ -57,9 +57,11 @@ export interface SessionInfo {
   mode: 'live' | 'test';
 }
 
+export type ChatRole = 'visitor' | 'agent' | 'event';
+
 export interface ChatMessage {
   id: string;
-  role: 'visitor' | 'agent';
+  role: ChatRole;
   text: string;
   createdAt: string;
   /** True while an agent reply is still being written. */
@@ -98,6 +100,52 @@ export interface ContactDetails {
   company?: string;
   /** Why they reached out, from the card's options or typed as Other. */
   reason?: string;
+}
+
+/**
+ * Who the visitor is, in the brand's own terms (`cx.identify`). Level-triggered:
+ * it stays in scope for every later turn until changed.
+ */
+export interface VisitorIdentity {
+  id?: string;
+  email?: string;
+  name?: string;
+  /** Anything else the site knows: plan, company, role, tier… */
+  traits?: Record<string, unknown>;
+}
+
+/** One action the page offered and the agent asked it to run. */
+export interface ClientActionCall {
+  id: string;
+  name: string;
+  inputs: Record<string, unknown>;
+}
+
+/** What the page's handler returns; it reaches the graph as `result`. */
+export type ClientActionHandler = (
+  inputs: Record<string, unknown>,
+  name: string,
+) => unknown | Promise<unknown>;
+
+/** The result of `cx.track`. */
+export interface TrackResult {
+  accepted: boolean;
+  name: string;
+  /** The author asked the widget to open itself for this event. */
+  openChat: boolean;
+  /** The chip to draw, once the branch has said something. */
+  event?: ChatMessage;
+  /** Her proactive reply. */
+  message?: ChatMessage;
+  suggestions?: string[];
+  askDetails?: DetailsForm;
+  detailsForm?: DetailsForm;
+  /** An awaited page action the SDK ran (and reported back). */
+  action?: ClientActionCall;
+  /** Fire-and-forget page actions. */
+  actions?: ClientActionCall[];
+  /** Why an event was ignored: `unknown-event`, `duplicate`, … */
+  ignored?: string;
 }
 
 /**

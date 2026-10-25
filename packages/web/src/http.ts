@@ -5,6 +5,8 @@ export interface RequestOptions {
   body?: unknown;
   token?: string;
   signal?: AbortSignal;
+  /** Let the request outlive the page (a click that navigates away). */
+  keepalive?: boolean;
 }
 
 async function errorFrom(res: Response): Promise<CxError> {
@@ -33,6 +35,7 @@ export async function send(apiUrl: string, path: string, opts: RequestOptions = 
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       signal: opts.signal,
+      keepalive: opts.keepalive,
       // No cookies, ever: the SDK authenticates with its own bearer token, and
       // a credentialed request would carry the brand page's cookies to us.
       credentials: 'omit',

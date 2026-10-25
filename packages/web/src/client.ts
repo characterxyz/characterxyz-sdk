@@ -4,7 +4,17 @@ import { Emitter } from './emitter.js';
 import { CxError } from './errors.js';
 import { request } from './http.js';
 import { localStore, memoryStore, SessionManager, type VisitorStore } from './session.js';
-import type { AgentCard, ContactDetails, Features, Opening, SessionInfo } from './types.js';
+import type {
+  AgentCard,
+  ClientActionCall,
+  ClientActionHandler,
+  ContactDetails,
+  Features,
+  Opening,
+  SessionInfo,
+  TrackResult,
+  VisitorIdentity,
+} from './types.js';
 
 export const DEFAULT_API_URL = 'https://api.character.xyz';
 
@@ -28,6 +38,8 @@ export interface ClientEvents extends Record<string, unknown> {
   /** A call started or ended; the widget swaps its view on this. */
   call: Call | null;
   error: CxError;
+  /** A site event was accepted (or ignored): the widget may open itself. */
+  siteEvent: TrackResult;
 }
 
 /**
@@ -132,6 +144,89 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
     await request(this.apiUrl, '/sdk/v1/lead/decline', { token, method: 'POST', body: {} });
   }
 
+  /**
+   * Who the visitor is (`cx.identify`). Level-triggered: it stays in scope for
+   * every later turn, event and lead until changed.
+   */
+  async identify(visitor: VisitorIdentity): Promise<void> {
+    const token = await this.session.token();
+    await request(this.apiUrl, '/sdk/v1/context', { token, method: 'POST', body: { visitor } });
+  }
+
+  /**
+   * What the page currently knows (`cx.setContext`): plan, cart, page,
+   * entitlement. Replaces the previous object, so removing a key means removing
+   * it here too.
+   */
+  async setContext(context: Record<string, unknown>): Promise<void> {
+    const token = await this.session.token();
+    await request(this.apiUrl, '/sdk/v1/context', { token, method: 'POST', body: { context } });
+  }
+
+  /**
+   * Something the visitor DID (`cx.track`). Only names the agent's graph
+   * declares are accepted; anything else comes back `ignored`.
+   *
+   * Fire-and-forget for the caller: `void cx.track(...)` is the normal use. The
+   * request is `keepalive`, so a click that navigates away still lets the agent
+   * finish. Two calls with the same `id` are one event.
+   */
+  async track(name: string, data: Record<string, unknown> = {}, opts: { id?: string } = {}): Promise<TrackResult> {
+    const token = await this.session.token();
+    const id = opts.id ?? eventId();
+    let res = await request<TrackResult>(this.apiUrl, '/sdk/v1/track', {
+      token,
+      method: 'POST',
+      body: { name, data, id },
+      keepalive: true,
+    });
+    this.emit('siteEvent', res);
+    if (!res.accepted && res.ignored && res.ignored !== 'duplicate') {
+      console.warn(`[characterxyz] event "${name}" ignored: ${res.ignored}`);
+    }
+    // Nobody waits for these; run them and forget.
+    for (const a of res.actions ?? []) void this.runAction(a);
+    // Awaited page actions: run, report, and keep going if the graph asks again.
+    let guard = 0;
+    while (res.action && guard++ < 4) {
+      const action = res.action;
+      const outcome = await this.runAction(action);
+      res = await request<TrackResult>(this.apiUrl, `/sdk/v1/actions/${encodeURIComponent(action.id)}`, {
+        token,
+        method: 'POST',
+        body: outcome,
+      });
+      this.emit('siteEvent', res);
+    }
+    this.chat.applySiteEvent(res);
+    return res;
+  }
+
+  /**
+   * Offer an action the agent may call on this page (`Client Action` node).
+   * Returns a function that removes it. A missing handler is a graph `failed`,
+   * not a broken page: the SDK reports the error instead of throwing.
+   */
+  registerAction(name: string, handler: ClientActionHandler): () => void {
+    this.actionHandlers.set(name, handler);
+    return () => {
+      if (this.actionHandlers.get(name) === handler) this.actionHandlers.delete(name);
+    };
+  }
+
+  private readonly actionHandlers = new Map<string, ClientActionHandler>();
+
+  private async runAction(a: ClientActionCall): Promise<{ ok: boolean; result?: unknown; error?: string }> {
+    const handler = this.actionHandlers.get(a.name);
+    if (!handler) return { ok: false, error: `no handler registered for "${a.name}"` };
+    try {
+      const result = await handler(a.inputs ?? {}, a.name);
+      return { ok: true, result: result ?? null };
+    } catch (e) {
+      return { ok: false, error: String((e as Error)?.message ?? e) };
+    }
+  }
+
   /** Start a voice call. Call from a click: it needs the microphone and audio unlocked. */
   async startCall(opts: CallOptions = {}): Promise<Call> {
     if (this.destroyed) throw new CxError('invalid', 'This client was destroyed.');
@@ -153,6 +248,14 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
     void this.currentCall?.hangUp();
     this.chat.stop();
     this.chat.clear();
+    this.actionHandlers.clear();
     this.clear();
   }
+}
+
+/** An idempotency id for one event, without requiring a secure context. */
+function eventId(): string {
+  const c = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (c && typeof c.randomUUID === 'function') return `evt_${c.randomUUID()}`;
+  return `evt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }

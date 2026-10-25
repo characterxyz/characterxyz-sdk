@@ -2,7 +2,7 @@ import { Emitter } from './emitter.js';
 import { CxError } from './errors.js';
 import { readEvents, request, send } from './http.js';
 import type { SessionManager } from './session.js';
-import type { ChatMessage } from './types.js';
+import type { ChatMessage, TrackResult } from './types.js';
 
 export interface ChatEvents extends Record<string, unknown> {
   /** The whole list, after any change. */
@@ -43,6 +43,28 @@ export class Chat extends Emitter<ChatEvents> {
   private publish() {
     this.list = [...this.list];
     this.emit('messages', this.list);
+  }
+
+  /**
+   * Take the result of a site event: the chip that says what happened, then
+   * her proactive reply. A turn already in the list (loaded from history) is
+   * not added twice.
+   */
+  applySiteEvent(r: TrackResult): void {
+    let changed = false;
+    if (r.event && !this.list.some((m) => m.id === r.event!.id)) {
+      this.list.push(r.event);
+      changed = true;
+    }
+    if (r.message && !this.list.some((m) => m.id === r.message!.id)) {
+      this.list.push({
+        ...r.message,
+        ...(r.suggestions?.length ? { suggestions: r.suggestions } : {}),
+        ...(r.askDetails ? { askDetails: r.askDetails } : {}),
+      });
+      changed = true;
+    }
+    if (changed) this.publish();
   }
 
   /** Load earlier messages (once; later calls return what is held). */

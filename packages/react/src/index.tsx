@@ -27,6 +27,10 @@ export interface CharacterXYZWidgetProps extends MountOptions {
 export interface CharacterXYZWidgetRef {
   open(view?: 'chat' | 'call'): void;
   close(): void;
+  track(name: string, data?: Record<string, unknown>, opts?: { id?: string }): Promise<import('@characterxyz/web').TrackResult> | undefined;
+  identify(visitor: import('@characterxyz/web').VisitorIdentity): Promise<void> | undefined;
+  setContext(context: Record<string, unknown>): Promise<void> | undefined;
+  registerAction(name: string, handler: import('@characterxyz/web').ClientActionHandler): (() => void) | undefined;
 }
 
 /**
@@ -41,6 +45,10 @@ export const CharacterXYZWidget = forwardRef<CharacterXYZWidgetRef, CharacterXYZ
   useImperativeHandle(ref, () => ({
     open: (v) => handle.current?.open(v),
     close: () => handle.current?.close(),
+    track: (n, d, o) => handle.current?.track(n, d, o),
+    identify: (v) => handle.current?.identify(v),
+    setContext: (c) => handle.current?.setContext(c),
+    registerAction: (n, h) => handle.current?.registerAction(n, h),
   }));
 
   useEffect(() => {
@@ -83,6 +91,10 @@ export interface UseCharacterXYZ {
   send(text: string): Promise<void>;
   call: CallState | null;
   startCall(): Promise<Call | null>;
+  track(name: string, data?: Record<string, unknown>, opts?: { id?: string }): Promise<import('@characterxyz/web').TrackResult | null>;
+  identify(visitor: import('@characterxyz/web').VisitorIdentity): Promise<void>;
+  setContext(context: Record<string, unknown>): Promise<void>;
+  registerAction(name: string, handler: import('@characterxyz/web').ClientActionHandler): () => void;
 }
 
 /** The headless SDK as React state, for brands building their own UI. */
@@ -131,6 +143,14 @@ export function useCharacterXYZ(options: InitOptions): UseCharacterXYZ {
       await client?.chat.send(text);
     },
     startCall: async () => (client ? client.startCall() : null),
+    track: async (name, data, opts) => (client ? client.track(name, data, opts) : null),
+    identify: async (visitor) => {
+      await client?.identify(visitor);
+    },
+    setContext: async (context) => {
+      await client?.setContext(context);
+    },
+    registerAction: (name, handler) => client?.registerAction(name, handler) ?? (() => {}),
   };
 }
 

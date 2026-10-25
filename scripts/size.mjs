@@ -16,8 +16,11 @@ const BUDGET_KB = {
   // 34 since 2026-10-25 (was 33): the details card gained an authored reason
   // field — a select with the author's options plus free text (+0.4 KB).
   // Decided, not drifted.
-  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 34],
-  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 34],
+  // 35 since 2026-10-25 (was 34): the SDK binding became three layers — context
+  // in (`identify`/`setContext`), events in (`track` + schema), actions out
+  // (`registerAction` + an awaited page action). Decided, not drifted.
+  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 35],
+  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 35],
   'React wrapper (excl. React and the widget)': ['packages/react/dist/index.js', 2],
 };
 

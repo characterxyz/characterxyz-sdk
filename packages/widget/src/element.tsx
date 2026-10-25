@@ -1,4 +1,4 @@
-import { CharacterXYZ, CxError, type InitOptions } from '@characterxyz/web';
+import { CharacterXYZ, CxError, type ClientActionHandler, type InitOptions, type TrackResult, type VisitorIdentity } from '@characterxyz/web';
 import { render } from 'preact';
 
 import { App, type AppApi, type View } from './app.js';
@@ -68,6 +68,9 @@ export class CharacterXYZElement extends HTMLElement {
   private booted = false;
   private mq: MediaQueryList | null = null;
   private stage: HTMLDivElement | null = null;
+  private waiters: Array<(c: CharacterXYZ | null) => void> = [];
+  private queuedActions = new Map<string, ClientActionHandler>();
+  private bootFailed = false;
 
   connectedCallback() {
     if (this.booted) return;
@@ -87,6 +90,7 @@ export class CharacterXYZElement extends HTMLElement {
 
   disconnectedCallback() {
     if (this.stage) render(null, this.stage);
+    this.settleWaiters(false);
     this.client?.destroy();
     this.client = null;
     this.mq?.removeEventListener('change', this.onSchemeChange);
@@ -100,6 +104,45 @@ export class CharacterXYZElement extends HTMLElement {
 
   close() {
     this.api?.close();
+  }
+
+  /** Something the visitor did. Queues until the widget has booted. */
+  track(name: string, data: Record<string, unknown> = {}, opts: { id?: string } = {}): Promise<TrackResult> {
+    return this.untilClient().then((c) => c.track(name, data, opts));
+  }
+
+  /** Who the visitor is. Queues until the widget has booted. */
+  identify(visitor: VisitorIdentity): Promise<void> {
+    return this.untilClient().then((c) => c.identify(visitor));
+  }
+
+  /** What the page knows right now. Queues until the widget has booted. */
+  setContext(context: Record<string, unknown>): Promise<void> {
+    return this.untilClient().then((c) => c.setContext(context));
+  }
+
+  /** Offer an action the agent may call on this page. */
+  registerAction(name: string, handler: ClientActionHandler): () => void {
+    this.queuedActions.set(name, handler);
+    this.client?.registerAction(name, handler);
+    return () => {
+      this.queuedActions.delete(name);
+      this.client?.registerAction(name, handler)();
+    };
+  }
+
+  private untilClient(): Promise<CharacterXYZ> {
+    if (this.client) return Promise.resolve(this.client);
+    if (this.bootFailed) return Promise.reject(new CxError('unknown', 'The widget could not start.'));
+    return new Promise((resolve, reject) => {
+      this.waiters.push((c) => (c ? resolve(c) : reject(new CxError('unknown', 'The widget could not start.'))));
+    });
+  }
+
+  private settleWaiters(ok: boolean) {
+    const waiters = this.waiters;
+    this.waiters = [];
+    for (const w of waiters) w(ok ? this.client : null);
   }
 
   private fire(name: string, detail?: unknown) {
@@ -130,6 +173,8 @@ export class CharacterXYZElement extends HTMLElement {
       // on the brand's page. The console and the event say why.
       console.warn(`[characterxyz] widget not shown: ${err.message}`);
       this.fire('cx-error', { code: err.code, message: err.message });
+      this.bootFailed = true;
+      this.settleWaiters(false);
       return;
     }
     if (!this.isConnected) {
@@ -137,6 +182,7 @@ export class CharacterXYZElement extends HTMLElement {
       return;
     }
     const client = this.client;
+    for (const [name, handler] of this.queuedActions) client.registerAction(name, handler);
     // Designer appearance, then attributes, then mount() options.
     let config = applyLayer(DEFAULTS, client.appearance as Record<string, unknown>);
     config = applyLayer(config, attrs);
@@ -177,6 +223,7 @@ export class CharacterXYZElement extends HTMLElement {
     );
     if (config.open) this.setAttribute('data-open', '');
     this.fire('cx-ready', { agent: { id: client.agent.id, name: client.agent.name }, features: client.features });
+    this.settleWaiters(true);
   }
 
   private applyTokens(c: WidgetConfig) {
@@ -209,6 +256,10 @@ export interface WidgetHandle {
   element: CharacterXYZElement;
   open(view?: 'chat' | 'call'): void;
   close(): void;
+  track(name: string, data?: Record<string, unknown>, opts?: { id?: string }): Promise<TrackResult>;
+  identify(visitor: VisitorIdentity): Promise<void>;
+  setContext(context: Record<string, unknown>): Promise<void>;
+  registerAction(name: string, handler: ClientActionHandler): () => void;
   destroy(): void;
 }
 
@@ -222,6 +273,10 @@ export function mount(options: MountOptions): WidgetHandle {
     element: el,
     open: (v) => el.open(v),
     close: () => el.close(),
+    track: (n, d, o) => el.track(n, d, o),
+    identify: (v) => el.identify(v),
+    setContext: (c) => el.setContext(c),
+    registerAction: (n, h) => el.registerAction(n, h),
     destroy: () => el.remove(),
   };
 }

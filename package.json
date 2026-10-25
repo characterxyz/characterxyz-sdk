@@ -1,7 +1,7 @@
 {
   "name": "characterxyz-sdk",
   "private": true,
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Character XYZ SDKs: embed a Character XYZ agent (chat + voice call) in web, Android and Apple apps.",
   "license": "MIT",
   "packageManager": "pnpm@11.13.0",

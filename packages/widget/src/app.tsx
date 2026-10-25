@@ -1,6 +1,6 @@
 import type { Call, CallState, Caption, CharacterXYZ, ChatMessage, ContactDetails, DetailsForm, Opening } from '@characterxyz/web';
 import { Fragment, type ComponentChildren } from 'preact';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 import { DEFAULTS, type WidgetConfig } from './config.js';
 import { blocks, clock, type Inline } from './format.js';
@@ -216,13 +216,17 @@ function DetailsCard({
     setTimeout(() => first.current?.focus({ preventScroll: true }), 80);
   }, []);
   // ⚠ THE CARD GROWS when the reason view opens; without this the Send row
-  // slides under the composer. Scroll the chat's own log, never the page.
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      const log = formRef.current?.closest('.log') as HTMLElement | null;
-      if (log) log.scrollTop = log.scrollHeight;
-    });
-    return () => cancelAnimationFrame(raf);
+  // slides under the composer. A LAYOUT effect, not rAF: a backgrounded tab
+  // freezes animation frames, and the card must still land scrolled.
+  useLayoutEffect(() => {
+    const log = formRef.current?.closest('.log') as HTMLElement | null;
+    if (!log) return;
+    // ⚠ THE LOG IS `scroll-behavior: smooth`; an animated jump does not run in
+    // a background tab (and lags in the foreground). This one must be instant.
+    const previous = log.style.scrollBehavior;
+    log.style.scrollBehavior = 'auto';
+    log.scrollTop = log.scrollHeight;
+    log.style.scrollBehavior = previous;
   }, [editingReason, otherReason]);
   return (
     <form

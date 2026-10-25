@@ -79,11 +79,15 @@ export interface ChatMessage {
 /** The contact card: which fields to ask, and the consent line to show. */
 export interface DetailsForm {
   /** Always `name` and `email`; `phone` and `company` when the key asks for them. */
-  fields: ('name' | 'email' | 'phone' | 'company')[];
+  fields: ('name' | 'email' | 'phone' | 'company' | 'reason')[];
   /** The brand's privacy policy, linked from the consent line. */
   privacyUrl: string | null;
   /** Shown under the card; sending is the consent. */
   consent: string;
+  /** The card's reason field, when the author set a label. */
+  reasonLabel?: string | null;
+  /** Choices offered for the reason; the visitor may still pick Other. */
+  reasonOptions?: string[];
 }
 
 /** What a visitor leaves. */
@@ -92,6 +96,8 @@ export interface ContactDetails {
   email: string;
   phone?: string;
   company?: string;
+  /** Why they reached out, from the card's options or typed as Other. */
+  reason?: string;
 }
 
 /**

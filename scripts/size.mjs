@@ -13,8 +13,11 @@ const BUDGET_KB = {
   'Server helper (@characterxyz/server)': ['packages/server/dist/index.js', 1.5],
   // 33 since 2026-10-14 (was 32): the window's labels became a table so the
   // server can send them in the visitor's language (+0.5 KB). Decided, not drifted.
-  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 33],
-  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 33],
+  // 34 since 2026-10-25 (was 33): the details card gained an authored reason
+  // field — a select with the author's options plus free text (+0.4 KB).
+  // Decided, not drifted.
+  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 34],
+  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 34],
   'React wrapper (excl. React and the widget)': ['packages/react/dist/index.js', 2],
 };
 

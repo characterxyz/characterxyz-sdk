@@ -151,12 +151,25 @@ function Text({ parts }: { parts: Inline[] }) {
   );
 }
 
-const LABELS: Record<string, { label: 'nameField' | 'emailField' | 'phoneField' | 'companyField'; type: string; auto: string }> = {
+const LABELS: Record<string, { label: 'nameField' | 'emailField' | 'phoneField' | 'companyField' | 'reasonField'; type: string; auto: string }> = {
   name: { label: 'nameField', type: 'text', auto: 'name' },
   email: { label: 'emailField', type: 'email', auto: 'email' },
   phone: { label: 'phoneField', type: 'tel', auto: 'tel' },
   company: { label: 'companyField', type: 'text', auto: 'organization' },
+  reason: { label: 'reasonField', type: 'text', auto: 'off' },
 };
+
+/** A reason handed over by the page: `?reason=` on the URL or `data-reason` on the tag. */
+function prefillReason(): string {
+  try {
+    const q = new URLSearchParams(location.search).get('reason') ?? new URLSearchParams(location.search).get('intent');
+    if (q && q.trim()) return q.trim().slice(0, 120);
+    const host = document.querySelector('character-xyz');
+    return (host?.getAttribute('data-reason') ?? '').trim().slice(0, 120);
+  } catch {
+    return '';
+  }
+}
 
 /** The contact card: a few fields in the chat, skippable, sending is the consent. */
 function DetailsCard({
@@ -177,6 +190,19 @@ function DetailsCard({
   skipLabel: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(initial ?? {}) }) as Record<string, string>);
+  const reasonOptions = form.reasonOptions ?? [];
+  const wantsReason = form.fields.includes('reason');
+  const [reasonChoice, setReasonChoice] = useState(() => {
+    if (!wantsReason) return '';
+    const pre = prefillReason();
+    if (!pre) return '';
+    return reasonOptions.includes(pre) ? pre : '__other';
+  });
+  const [reasonText, setReasonText] = useState(() => {
+    if (!wantsReason) return '';
+    const pre = prefillReason();
+    return pre && !reasonOptions.includes(pre) ? pre : '';
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -194,11 +220,13 @@ function DetailsCard({
         setErrors({});
         setFailed(null);
         try {
+          const reason = (reasonChoice === '__other' ? reasonText : reasonChoice).trim();
           await onSend({
             name: values.name ?? '',
             email: values.email ?? '',
             ...(values.phone ? { phone: values.phone } : {}),
             ...(values.company ? { company: values.company } : {}),
+            ...(wantsReason && reason ? { reason } : {}),
           });
         } catch (err) {
           const fields = (err as { fields?: Record<string, string> }).fields ?? {};
@@ -213,22 +241,56 @@ function DetailsCard({
       {note ? <div class="card__note">{note}</div> : null}
       {form.fields.map((f, i) => {
         const spec = LABELS[f]!;
+        const label = f === 'reason' ? form.reasonLabel || t('reasonField') : t(spec.label);
         return (
           <label class="card__field" key={f}>
             <span>
-              {t(spec.label)}
-              {f === 'phone' || f === 'company' ? <i> · {t('optional')}</i> : null}
+              {label}
+              {f === 'phone' || f === 'company' || f === 'reason' ? <i> · {t('optional')}</i> : null}
             </span>
-            <input
-              ref={i === 0 ? first : undefined}
-              type={spec.type}
-              autocomplete={spec.auto}
-              required={f === 'name' || f === 'email'}
-              maxLength={f === 'email' ? 254 : 120}
-              value={values[f] ?? ''}
-              aria-invalid={errors[f] ? 'true' : undefined}
-              onInput={(e) => setValues((v) => ({ ...v, [f]: e.currentTarget.value }))}
-            />
+            {f === 'reason' ? (
+              reasonOptions.length ? (
+                <Fragment>
+                  <select value={reasonChoice} onChange={(e) => setReasonChoice(e.currentTarget.value)}>
+                    <option value="">{t('reasonChoose')}</option>
+                    {reasonOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                    <option value="__other">{t('reasonOther')}</option>
+                  </select>
+                  {reasonChoice === '__other' ? (
+                    <input
+                      type="text"
+                      maxLength={500}
+                      placeholder={t('reasonPlaceholder')}
+                      value={reasonText}
+                      onInput={(e) => setReasonText(e.currentTarget.value)}
+                    />
+                  ) : null}
+                </Fragment>
+              ) : (
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  placeholder={t('reasonPlaceholder')}
+                  value={reasonText}
+                  onInput={(e) => setReasonText(e.currentTarget.value)}
+                />
+              )
+            ) : (
+              <input
+                ref={i === 0 ? first : undefined}
+                type={spec.type}
+                autocomplete={spec.auto}
+                required={f === 'name' || f === 'email'}
+                maxLength={f === 'email' ? 254 : 120}
+                value={values[f] ?? ''}
+                aria-invalid={errors[f] ? 'true' : undefined}
+                onInput={(e) => setValues((v) => ({ ...v, [f]: e.currentTarget.value }))}
+              />
+            )}
             {errors[f] ? <em>{errors[f]}</em> : null}
           </label>
         );

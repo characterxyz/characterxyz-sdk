@@ -217,7 +217,10 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .card__field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--cx-ink-2); }
 .card__field i { font-style: normal; font-weight: 400; color: var(--cx-ink-3); }
 .card__field input { height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 14px; font-weight: 400; outline: none; transition: border-color .2s; }
-.card__field input:focus { border-color: var(--cx-accent); }
+.card__field select, .card__field textarea { padding: 0 12px; border-radius: 10px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 14px; font-weight: 400; outline: none; transition: border-color .2s; }
+.card__field select { height: 40px; }
+.card__field textarea { padding: 10px 12px; min-height: 64px; resize: vertical; }
+.card__field input:focus, .card__field select:focus, .card__field textarea:focus { border-color: var(--cx-accent); }
 .card__field input[aria-invalid="true"] { border-color: #e5484d; }
 .card__field em { font-style: normal; font-weight: 400; color: #e5484d; }
 .card__consent { font-size: 11.5px; line-height: 1.45; color: var(--cx-ink-3); }

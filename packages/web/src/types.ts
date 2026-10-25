@@ -90,6 +90,13 @@ export interface DetailsForm {
   reasonLabel?: string | null;
   /** Choices offered for the reason; the visitor may still pick Other. */
   reasonOptions?: string[];
+  /**
+   * The intention the conversation already told us, when it is unmistakable.
+   * Shown as a sentence she says, never as a silent form default.
+   */
+  reasonDefault?: string | null;
+  /** Where that default came from. */
+  reasonSource?: 'conversation' | 'cta';
 }
 
 /** What a visitor leaves. */

@@ -180,6 +180,7 @@ function DetailsCard({
   onSkip,
   skipLabel,
   initial,
+  hasHistory,
 }: {
   form: DetailsForm;
   initial?: TypedContact;
@@ -188,21 +189,24 @@ function DetailsCard({
   onSend: (d: ContactDetails) => Promise<void>;
   onSkip: () => void;
   skipLabel: string;
+  /** Whether there is a conversation to infer from (a call card has none). */
+  hasHistory: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(initial ?? {}) }) as Record<string, string>);
   const reasonOptions = form.reasonOptions ?? [];
   const wantsReason = form.fields.includes('reason');
-  const [reasonChoice, setReasonChoice] = useState(() => {
-    if (!wantsReason) return '';
-    const pre = prefillReason();
-    if (!pre) return '';
-    return reasonOptions.includes(pre) ? pre : '__other';
-  });
-  const [reasonText, setReasonText] = useState(() => {
-    if (!wantsReason) return '';
-    const pre = prefillReason();
-    return pre && !reasonOptions.includes(pre) ? pre : '';
-  });
+  // ⚠ THE CONVERSATION OUTRANKS THE PAGE. A `?reason=` left on a link is a
+  // hint from the CTA, not something the visitor said; it is only used when
+  // there is no conversation at all (the call card, or a fresh link).
+  const pageHint = wantsReason && !hasHistory ? prefillReason() : '';
+  const initialReason = form.reasonDefault || pageHint || '';
+  const [reasonValue, setReasonValue] = useState(initialReason);
+  const [reasonSource, setReasonSource] = useState<'conversation' | 'cta' | 'user' | ''>(
+    form.reasonDefault ? (form.reasonSource ?? 'conversation') : pageHint ? 'cta' : '',
+  );
+  const [editingReason, setEditingReason] = useState(wantsReason && !initialReason);
+  const [otherReason, setOtherReason] = useState(false);
+  const [reasonText, setReasonText] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -220,7 +224,7 @@ function DetailsCard({
         setErrors({});
         setFailed(null);
         try {
-          const reason = (reasonChoice === '__other' ? reasonText : reasonChoice).trim();
+          const reason = (otherReason ? reasonText : reasonValue).trim();
           await onSend({
             name: values.name ?? '',
             email: values.email ?? '',
@@ -240,27 +244,61 @@ function DetailsCard({
       <div class="card__title">{title}</div>
       {note ? <div class="card__note">{note}</div> : null}
       {form.fields.map((f, i) => {
-        const spec = LABELS[f]!;
-        const label = f === 'reason' ? form.reasonLabel || t('reasonField') : t(spec.label);
-        return (
-          <label class="card__field" key={f}>
-            <span>
-              {label}
-              {f === 'phone' || f === 'company' || f === 'reason' ? <i> · {t('optional')}</i> : null}
-            </span>
-            {f === 'reason' ? (
-              reasonOptions.length ? (
+        if (f === 'reason') {
+          return (
+            <div class="card__field card__field--reason" key={f}>
+              {!editingReason && reasonValue ? null : (
+                <span class="card__reason-label">{form.reasonLabel || t('reasonField')}</span>
+              )}
+              {!editingReason && reasonValue ? (
                 <Fragment>
-                  <select value={reasonChoice} onChange={(e) => setReasonChoice(e.currentTarget.value)}>
-                    <option value="">{t('reasonChoose')}</option>
-                    {reasonOptions.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                    <option value="__other">{t('reasonOther')}</option>
-                  </select>
-                  {reasonChoice === '__other' ? (
+                  <div class="card__reason-line">
+                    <span class="card__reason-said">{t('reasonInferred')}</span>
+                    <strong>{reasonValue}</strong>
+                    <button type="button" class="card__change" onClick={() => setEditingReason(true)}>
+                      {t('change')}
+                    </button>
+                  </div>
+                  {reasonSource ? (
+                    <span class="card__reason-src">
+                      {reasonSource === 'cta' ? t('reasonFromPage') : reasonSource === 'conversation' ? t('reasonFromConversation') : null}
+                    </span>
+                  ) : null}
+                </Fragment>
+              ) : (
+                <div class="card__reason-edit">
+                  {reasonOptions.length ? (
+                    <div class="card__chips" role="group" aria-label={form.reasonLabel || t('reasonField')}>
+                      {reasonOptions.map((o) => (
+                        <button
+                          type="button"
+                          class="card__chip"
+                          key={o}
+                          aria-pressed={!otherReason && reasonValue === o}
+                          onClick={() => {
+                            setReasonValue(o);
+                            setOtherReason(false);
+                            setReasonSource('user');
+                            setEditingReason(false);
+                          }}
+                        >
+                          {o}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        class="card__chip"
+                        aria-pressed={otherReason}
+                        onClick={() => {
+                          setOtherReason(true);
+                          setReasonValue('');
+                        }}
+                      >
+                        {t('reasonOther')}
+                      </button>
+                    </div>
+                  ) : null}
+                  {otherReason || !reasonOptions.length ? (
                     <input
                       type="text"
                       maxLength={500}
@@ -269,28 +307,30 @@ function DetailsCard({
                       onInput={(e) => setReasonText(e.currentTarget.value)}
                     />
                   ) : null}
-                </Fragment>
-              ) : (
-                <textarea
-                  rows={2}
-                  maxLength={500}
-                  placeholder={t('reasonPlaceholder')}
-                  value={reasonText}
-                  onInput={(e) => setReasonText(e.currentTarget.value)}
-                />
-              )
-            ) : (
-              <input
-                ref={i === 0 ? first : undefined}
-                type={spec.type}
-                autocomplete={spec.auto}
-                required={f === 'name' || f === 'email'}
-                maxLength={f === 'email' ? 254 : 120}
-                value={values[f] ?? ''}
-                aria-invalid={errors[f] ? 'true' : undefined}
-                onInput={(e) => setValues((v) => ({ ...v, [f]: e.currentTarget.value }))}
-              />
-            )}
+                </div>
+              )}
+              {errors.reason ? <em>{errors.reason}</em> : null}
+            </div>
+          );
+        }
+        const spec = LABELS[f]!;
+        const label = t(spec.label);
+        return (
+          <label class="card__field" key={f}>
+            <span>
+              {label}
+              {f === 'phone' || f === 'company' ? <i> · {t('optional')}</i> : null}
+            </span>
+            <input
+              ref={i === 0 ? first : undefined}
+              type={spec.type}
+              autocomplete={spec.auto}
+              required={f === 'name' || f === 'email'}
+              maxLength={f === 'email' ? 254 : 120}
+              value={values[f] ?? ''}
+              aria-invalid={errors[f] ? 'true' : undefined}
+              onInput={(e) => setValues((v) => ({ ...v, [f]: e.currentTarget.value }))}
+            />
             {errors[f] ? <em>{errors[f]}</em> : null}
           </label>
         );
@@ -875,6 +915,7 @@ export function App({ client, config, bind, onView }: AppProps) {
                   onSend={sendDetails}
                   onSkip={skipDetails}
                   skipLabel={card.kind === 'call' ? t('skipAndCall') : t('notNow')}
+                  hasHistory={messages.length > 0}
                 />
               );
             }

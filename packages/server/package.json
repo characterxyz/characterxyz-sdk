@@ -1,6 +1,6 @@
 {
   "name": "@characterxyz/server",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Character XYZ on your server: mint a session for a signed-in visitor with your secret key, and verify webhook signatures. Node, Deno, Bun and edge runtimes.",
   "license": "MIT",
   "type": "module",

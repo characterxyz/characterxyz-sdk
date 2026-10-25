@@ -49,6 +49,8 @@ export const CSS = /* css */ `
 *, *::before, *::after { box-sizing: border-box; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--cx-accent); outline-offset: 2px; }
+:host([data-theme="dark"]) { color-scheme: dark; }
+:host([data-theme="light"]) { color-scheme: light; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ------------------------------------------------------------ launcher */
@@ -219,12 +221,22 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .card__field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--cx-ink-2); }
 .card__field i { font-style: normal; font-weight: 400; color: var(--cx-ink-3); }
 .card__field input { height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 14px; font-weight: 400; outline: none; transition: border-color .2s; }
-.card__field select, .card__field textarea { padding: 0 12px; border-radius: 10px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 14px; font-weight: 400; outline: none; transition: border-color .2s; }
-.card__field select { height: 40px; }
+.card__field textarea { padding: 0 12px; border-radius: 10px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 14px; font-weight: 400; outline: none; transition: border-color .2s; }
 .card__field textarea { padding: 10px 12px; min-height: 64px; resize: vertical; }
-.card__field input:focus, .card__field select:focus, .card__field textarea:focus { border-color: var(--cx-accent); }
+.card__field input:focus, .card__field textarea:focus { border-color: var(--cx-accent); }
 .card__field input[aria-invalid="true"] { border-color: #e5484d; }
 .card__field em { font-style: normal; font-weight: 400; color: #e5484d; }
+.card__field--reason { gap: 6px; }
+.card__reason-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: 13px; font-weight: 400; color: var(--cx-ink-2); }
+.card__reason-line strong { color: var(--cx-ink); font-weight: 600; }
+.card__change { margin-left: auto; padding: 4px 0; border: 0; background: none; color: var(--cx-accent); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
+.card__change:hover { text-decoration: underline; text-underline-offset: 2px; }
+.card__reason-src { font-size: 11px; font-weight: 400; color: var(--cx-ink-3); }
+.card__reason-edit { display: flex; flex-direction: column; gap: 8px; }
+.card__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.card__chip { min-height: 34px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--cx-line); background: var(--cx-bubble); color: var(--cx-ink); font: inherit; font-size: 12.5px; font-weight: 500; line-height: 1; cursor: pointer; transition: border-color .2s, background .2s; }
+.card__chip:hover { border-color: var(--cx-ink-3); }
+.card__chip[aria-pressed="true"] { border-color: var(--cx-accent); box-shadow: inset 0 0 0 1px var(--cx-accent); }
 .card__consent { font-size: 11.5px; line-height: 1.45; color: var(--cx-ink-3); }
 .card__consent a { color: var(--cx-ink-2); text-decoration: underline; }
 .card__failed { font-size: 12.5px; color: #e5484d; }

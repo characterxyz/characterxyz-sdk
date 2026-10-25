@@ -43,4 +43,4 @@ export type {
   VideoClip,
   VisitorIdentity,
 } from './types.js';
-export const VERSION = '0.3.0';
+export const VERSION = '0.7.0';

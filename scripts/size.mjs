@@ -22,8 +22,10 @@ const BUDGET_KB = {
   // 37 since 2026-11-01 (was 35): `movable` — drag her along the bottom, and
   // she falls back down with a throw, a bounce and a sway (+1.6 KB). Decided,
   // not drifted.
-  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 37],
-  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 37],
+  // 38 since 2026-11-01 (was 37): a per-site cap on one message, with a counter near it,
+  // and a Role field on the details card (+0.3 KB). Decided, not drifted.
+  'Widget, ES module (core + Preact included)': ['packages/widget/dist/index.js', 38],
+  'Script tag (cx.js, everything)': ['packages/widget/dist/cx.js', 38],
   'React wrapper (excl. React and the widget)': ['packages/react/dist/index.js', 2],
 };
 

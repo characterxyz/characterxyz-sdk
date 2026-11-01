@@ -2,7 +2,7 @@ import { Emitter } from './emitter.js';
 import { CxError } from './errors.js';
 import { readEvents, request, send } from './http.js';
 import type { SessionManager } from './session.js';
-import type { ChatMessage, TrackResult } from './types.js';
+import type { ChatMessage, ClientActionCall, TrackResult } from './types.js';
 
 export interface ChatEvents extends Record<string, unknown> {
   /** The whole list, after any change. */
@@ -28,6 +28,8 @@ export class Chat extends Emitter<ChatEvents> {
   constructor(
     private readonly apiUrl: string,
     private readonly session: SessionManager,
+    /** Runs page actions a reply fired (`navigate`, say) with the page's registered handlers. */
+    private readonly runActions?: (actions: ClientActionCall[]) => void,
   ) {
     super();
   }
@@ -118,6 +120,7 @@ export class Chat extends Emitter<ChatEvents> {
               ...(d.askDetails && typeof d.askDetails === 'object' ? { askDetails: d.askDetails as ChatMessage['askDetails'] } : {}),
               ...(d.detailsForm && typeof d.detailsForm === 'object' ? { detailsForm: d.detailsForm as ChatMessage['detailsForm'] } : {}),
             };
+            if (Array.isArray(d.actions) && d.actions.length) this.runActions?.(d.actions as ClientActionCall[]);
           } else if (event === 'error') {
             failure = typeof d?.message === 'string' ? d.message : 'Something went wrong.';
           }

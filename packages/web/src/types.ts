@@ -55,6 +55,8 @@ export interface SessionInfo {
   /** The look set in the Embed designer. Opaque to the core. */
   appearance: Record<string, unknown>;
   mode: 'live' | 'test';
+  /** The longest message this site accepts, in characters. Older servers send nothing (2000). */
+  maxMessageChars?: number;
 }
 
 export type ChatRole = 'visitor' | 'agent' | 'event';
@@ -81,7 +83,7 @@ export interface ChatMessage {
 /** The contact card: which fields to ask, and the consent line to show. */
 export interface DetailsForm {
   /** Always `name` and `email`; `phone` and `company` when the key asks for them. */
-  fields: ('name' | 'email' | 'phone' | 'company' | 'reason')[];
+  fields: ('name' | 'email' | 'phone' | 'company' | 'role' | 'reason')[];
   /**
    * The fields the card refuses to send without. Name and email always; `phone`
    * only when the author ticked "Phone required" on the Respond node. Older
@@ -111,6 +113,8 @@ export interface ContactDetails {
   email: string;
   phone?: string;
   company?: string;
+  /** What they do ("Venue manager", "Founder"). */
+  role?: string;
   /** Why they reached out, from the card's options or typed as Other. */
   reason?: string;
 }

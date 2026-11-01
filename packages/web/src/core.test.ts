@@ -150,6 +150,16 @@ describe('chat', () => {
     expect(chat.isBusy).toBe(false);
   });
 
+  it('hands the page actions a reply fired to the page, once the reply is in', async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      sse(['event: done\ndata: {"id":"m1","text":"Here is pricing.","createdAt":"x","actions":[{"id":"a1","name":"navigate","inputs":{"section":"pricing"}}]}\n\n']),
+    );
+    const ran: unknown[] = [];
+    const chat = new Chat(API, m, (actions) => ran.push(...actions));
+    await chat.send('show me pricing');
+    expect(ran).toEqual([{ id: 'a1', name: 'navigate', inputs: { section: 'pricing' } }]);
+  });
+
   it('marks the message failed when the server reports an error, and can retry it', async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(sse(['event: error\ndata: {"message":"Something went wrong. Try again."}\n\n']));
     const chat = new Chat(API, m);

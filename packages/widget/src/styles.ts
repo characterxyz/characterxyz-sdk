@@ -251,6 +251,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 
 .compose { padding: 10px 12px 12px; }
 .compose__box { display: flex; align-items: flex-end; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 20px; background: var(--cx-solid); border: 1px solid var(--cx-line); transition: border-color .2s, box-shadow .2s; }
+.compose__count { align-self: center; flex: none; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--cx-ink-3); }
+.compose__count[data-full] { color: var(--cx-danger); font-weight: 600; }
 .compose__box:focus-within { border-color: color-mix(in oklab, var(--cx-accent) 60%, transparent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--cx-accent) 14%, transparent); }
 .compose textarea { flex: 1; resize: none; border: 0; outline: 0; background: transparent; font: inherit; font-size: 14.5px; color: var(--cx-ink); max-height: 120px; padding: 7px 0; line-height: 1.4; }
 .compose textarea::placeholder { color: var(--cx-ink-3); }

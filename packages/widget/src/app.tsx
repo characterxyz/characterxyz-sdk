@@ -151,11 +151,12 @@ function Text({ parts }: { parts: Inline[] }) {
   );
 }
 
-const LABELS: Record<string, { label: 'nameField' | 'emailField' | 'phoneField' | 'companyField' | 'reasonField'; type: string; auto: string }> = {
+const LABELS: Record<string, { label: 'nameField' | 'emailField' | 'phoneField' | 'companyField' | 'roleField' | 'reasonField'; type: string; auto: string }> = {
   name: { label: 'nameField', type: 'text', auto: 'name' },
   email: { label: 'emailField', type: 'email', auto: 'email' },
   phone: { label: 'phoneField', type: 'tel', auto: 'tel' },
   company: { label: 'companyField', type: 'text', auto: 'organization' },
+  role: { label: 'roleField', type: 'text', auto: 'organization-title' },
   reason: { label: 'reasonField', type: 'text', auto: 'off' },
 };
 
@@ -249,6 +250,7 @@ function DetailsCard({
             email: values.email ?? '',
             ...(values.phone ? { phone: values.phone } : {}),
             ...(values.company ? { company: values.company } : {}),
+            ...(values.role ? { role: values.role } : {}),
             ...(wantsReason && reason ? { reason } : {}),
           });
         } catch (err) {
@@ -332,7 +334,9 @@ function DetailsCard({
             </div>
           );
         }
-        const spec = LABELS[f]!;
+        // A field this version does not know (a newer server) is left out, never a crash.
+        const spec = LABELS[f];
+        if (!spec) return null;
         const label = t(spec.label);
         return (
           <label class="card__field" key={f}>
@@ -426,6 +430,10 @@ export function App({ client, config, bind, onView }: AppProps) {
   const { messages, busy } = useChat(client);
   const { call, state, captions, reset } = useCall(client);
   const [draft, setDraft] = useState('');
+  // The site's own cap on one message (a public page keeps it short); the
+  // count appears only near it, so an ordinary message never sees a number.
+  const maxChars = client.maxMessageChars;
+  const left = maxChars - draft.length;
   const log = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -968,7 +976,7 @@ export function App({ client, config, bind, onView }: AppProps) {
               ref={input}
               rows={1}
               value={draft}
-              maxLength={2000}
+              maxLength={maxChars}
               placeholder={config.placeholder === DEFAULTS.placeholder ? t('message') : config.placeholder}
               aria-label={t('message')}
               onInput={(e) => {
@@ -984,6 +992,11 @@ export function App({ client, config, bind, onView }: AppProps) {
                 }
               }}
             />
+            {left < maxChars * 0.15 ? (
+              <span class="compose__count" data-full={left < 1 || undefined} aria-live="polite">
+                {left}
+              </span>
+            ) : null}
             <button class="send" type="submit" aria-label={t('send')} disabled={!draft.trim() || busy}>
               <SendIcon />
             </button>

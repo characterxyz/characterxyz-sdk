@@ -89,6 +89,7 @@ const EN = {
   emailField: 'Email',
   phoneField: 'Phone',
   companyField: 'Company',
+  roleField: 'Role',
   poweredBy: 'Powered by {brand}',
   greetingDefault: "Hi, I'm {name}. How can I help you today?",
   endedTitle: 'Call ended',

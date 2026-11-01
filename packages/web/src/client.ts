@@ -58,7 +58,9 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
     private info: SessionInfo,
   ) {
     super();
-    this.chat = new Chat(apiUrl, session);
+    this.chat = new Chat(apiUrl, session, (actions) => {
+      for (const a of actions) void this.runAction(a);
+    });
   }
 
   static async init(opts: InitOptions): Promise<CharacterXYZ> {
@@ -83,6 +85,11 @@ export class CharacterXYZ extends Emitter<ClientEvents> {
 
   get appearance(): Record<string, unknown> {
     return (this.session.info ?? this.info).appearance ?? {};
+  }
+
+  /** The longest message this site accepts (the key's cap; 2000 when unset). */
+  get maxMessageChars(): number {
+    return (this.session.info ?? this.info).maxMessageChars ?? 2000;
   }
 
   get visitorId(): string {

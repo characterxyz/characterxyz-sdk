@@ -302,6 +302,27 @@ describe('details typed into the chat', () => {
     expect(values).toEqual(['Ginger', 'ginger@alpha.com', '']);
     expect(root.querySelector('.chips--start')).toBeNull();
   });
+
+  it('keeps an unfilled card after later messages (closing and reopening used to lose it)', async () => {
+    const form = { fields: ['name', 'email'], privacyUrl: null, consent: 'Sending is consent.' };
+    const at = new Date().toISOString();
+    const before = fakeClient.chat.messages;
+    fakeClient.chat.messages = [
+      { id: 'v1', role: 'visitor', text: 'I would like an invite', createdAt: at },
+      { id: 'a1', role: 'agent', text: 'Leave your details below.', createdAt: at, askDetails: form },
+      { id: 'a2', role: 'agent', text: 'Good to see you again!', createdAt: at },
+    ] as never;
+    try {
+      const { mount } = await import('./element.js');
+      const w = mount({ publishableKey: 'cxyz_pk_live_AAAAAAAAAAAAAAAAAAAAAAAA' });
+      await vi.waitFor(() => expect(w.element.shadowRoot!.querySelector('.presence')).not.toBeNull(), { timeout: 3000 });
+      w.open('chat');
+      const root = w.element.shadowRoot!;
+      await vi.waitFor(() => expect(root.querySelector('.card__title')?.textContent).toBe('Leave your details'), { timeout: 3000 });
+    } finally {
+      fakeClient.chat.messages = before;
+    }
+  });
 });
 
 describe('movable: she falls back to the floor', () => {

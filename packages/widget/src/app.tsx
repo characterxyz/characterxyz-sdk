@@ -463,6 +463,9 @@ export function App({ client, config, bind, onView }: AppProps) {
   // call when the key has somewhere to send it (`opening.details`). Sending or
   // "Not now" settles it for this conversation.
   const [detailsDone, setDetailsDone] = useState<'sent' | 'skipped' | null>(null);
+  // The reply whose card was sent or skipped: a LATER reply that offers the card again (the
+  // visitor asked again after "Not now") opens a fresh one.
+  const [settledOffer, setSettledOffer] = useState<string | null>(null);
   const [sentName, setSentName] = useState('');
   const [callCard, setCallCard] = useState<DetailsForm | null>(null);
   // Details the visitor TYPED into the chat: the card opens already filled in,
@@ -615,6 +618,7 @@ export function App({ client, config, bind, onView }: AppProps) {
 
   const settleDetails = (how: 'sent' | 'skipped', firstName = '') => {
     setDetailsDone(how);
+    setSettledOffer(offered?.id ?? null);
     setSentName(firstName);
     setTyped(null);
     const thenCall = !!callCard;
@@ -641,6 +645,7 @@ export function App({ client, config, bind, onView }: AppProps) {
     setHistory('empty');
     setGreeted(false);
     setDetailsDone(null);
+    setSettledOffer(null);
     setCallCard(null);
     setTyped(null);
     setDraft('');
@@ -684,12 +689,17 @@ export function App({ client, config, bind, onView }: AppProps) {
   // Which details card is open, if any — one at a time, and while one is open
   // it is the only thing asking (the suggestion chips step aside).
   const lastMsg = messages[messages.length - 1];
-  const invited = lastMsg?.role === 'agent' && !lastMsg.streaming ? lastMsg.askDetails : undefined;
+  // ⚠ THE CARD STAYS UNTIL IT IS SENT OR "NOT NOW" (founder, 2026-11-01). It used to show only
+  // while the reply that offered it was the LAST message, so closing and reopening the chat, or
+  // any later line, made an unfilled card vanish. Now it is the latest reply that offered it
+  // (the server returns that one on a reload while the card is still waiting).
+  const offered = [...messages].reverse().find((m) => m.role === 'agent' && !m.streaming && m.askDetails);
+  const invited = offered && offered.id !== settledOffer && detailsDone !== 'sent' ? offered.askDetails : undefined;
   const card: { form: DetailsForm; kind: 'call' | 'typed' | 'invited'; initial?: TypedContact } | null = callCard
     ? { form: callCard, kind: 'call' }
     : typed && detailsDone !== 'sent' && !busy
       ? { form: typed.form, kind: 'typed', initial: typed.values }
-      : invited && !detailsDone
+      : invited
         ? { form: invited, kind: 'invited' }
         : null;
 
@@ -926,7 +936,7 @@ export function App({ client, config, bind, onView }: AppProps) {
             if (card) {
               return (
                 <DetailsCard
-                  key={card.kind === 'invited' ? lastMsg?.id : card.kind}
+                  key={card.kind === 'invited' ? offered?.id : card.kind}
                   form={card.form}
                   initial={card.initial}
                   title={card.kind === 'call' ? t('beforeYouCall', { name }) : card.kind === 'typed' ? t('confirmDetails') : t('leaveDetails')}

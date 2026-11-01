@@ -3,6 +3,7 @@ import { render } from 'preact';
 
 import { App, type AppApi, type View } from './app.js';
 import { applyLayer, DEFAULTS, fromAttributes, type WidgetConfig } from './config.js';
+import { attachMover } from './move.js';
 import { CSS } from './styles.js';
 
 export const TAG = 'character-xyz';
@@ -71,6 +72,7 @@ export class CharacterXYZElement extends HTMLElement {
   private waiters: Array<(c: CharacterXYZ | null) => void> = [];
   private queuedActions = new Map<string, ClientActionHandler>();
   private bootFailed = false;
+  private detachMover: (() => void) | null = null;
 
   connectedCallback() {
     if (this.booted) return;
@@ -90,6 +92,8 @@ export class CharacterXYZElement extends HTMLElement {
 
   disconnectedCallback() {
     if (this.stage) render(null, this.stage);
+    this.detachMover?.();
+    this.detachMover = null;
     this.settleWaiters(false);
     this.client?.destroy();
     this.client = null;
@@ -222,12 +226,14 @@ export class CharacterXYZElement extends HTMLElement {
       this.stage!,
     );
     if (config.open) this.setAttribute('data-open', '');
+    if (config.movable) this.detachMover = attachMover(this);
     this.fire('cx-ready', { agent: { id: client.agent.id, name: client.agent.name }, features: client.features });
     this.settleWaiters(true);
   }
 
   private applyTokens(c: WidgetConfig) {
     this.dataset.side = c.position === 'bottom-left' ? 'left' : 'right';
+    this.dataset.grow = c.position === 'bottom-left' ? 'right' : 'left';
     this.dataset.mode = c.mode;
     if (c.mode === 'auto') {
       this.mq = matchMedia('(prefers-color-scheme: dark)');

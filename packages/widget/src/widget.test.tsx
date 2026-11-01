@@ -4,6 +4,7 @@ import { applyLayer, DEFAULTS, fromAttributes, safeColor, safeFont } from './con
 import { blocks, clock, inline, ordinal } from './format.js';
 import { ENGLISH, ending, place as linePlace, setStrings, t, wait } from './strings.js';
 import { CLOSE_UP, CROWN, faceOf, HALF_BODY, HEADROOM, MEDIUM, place } from './framing.js';
+import { body, panelOffset, release, step, type Body } from './move.js';
 
 describe('config layers', () => {
   it('takes valid values and drops the rest', () => {
@@ -300,5 +301,134 @@ describe('details typed into the chat', () => {
     const values = [...root.querySelectorAll<HTMLInputElement>('.card input')].map((i) => i.value);
     expect(values).toEqual(['Ginger', 'ginger@alpha.com', '']);
     expect(root.querySelector('.chips--start')).toBeNull();
+  });
+});
+
+describe('movable: she falls back to the floor', () => {
+  const bounds = { minX: -900, maxX: 0, minY: -700 };
+  const settle = (b: Body, reduced = false) => {
+    let frames = 0;
+    while (step(b, 1 / 60, bounds, reduced) && frames < 1200) frames++;
+    return frames;
+  };
+
+  it('is off unless asked for, and reads the attribute', () => {
+    expect(DEFAULTS.movable).toBe(false);
+    expect(applyLayer(DEFAULTS, { movable: 'true' }).movable).toBe(true);
+  });
+
+  it('dropped high up, she lands where she was let go, bounces once and comes to rest', () => {
+    const b = { ...body(-300), y: -600 };
+    let lowest = -Infinity;
+    let bounced = false;
+    let frames = 0;
+    while (step(b, 1 / 60, bounds) && frames < 1200) {
+      if (b.y === 0) lowest = 0;
+      if (lowest === 0 && b.y < -1) bounced = true;
+      frames++;
+    }
+    expect(b).toMatchObject({ x: -300, y: 0, vx: 0, vy: 0 });
+    expect(bounced).toBe(true);
+    expect(frames).toBeLessThan(260);
+  });
+
+  it('a sideways throw carries her along, the side wall stops her, and she never leaves the screen', () => {
+    const b = { ...body(-300), y: -400, vx: 2400 };
+    settle(b);
+    expect(b.x).toBeLessThanOrEqual(bounds.maxX);
+    // The wall takes most of the throw: she ends up nearer it than where she was let go.
+    expect(b.x).toBeGreaterThan(-250);
+    expect(b.y).toBe(0);
+  });
+
+  it('thrown upwards she stops at the top of the screen and still comes down', () => {
+    const b = { ...body(-100), y: -600, vy: -2600 };
+    let highest = 0;
+    while (step(b, 1 / 60, bounds)) highest = Math.min(highest, b.y);
+    expect(highest).toBeGreaterThanOrEqual(bounds.minY);
+    expect(b.y).toBe(0);
+  });
+
+  it('the landing squashes her a little and she springs back', () => {
+    const b = { ...body(), y: -600 };
+    let squash = 1;
+    while (step(b, 1 / 60, bounds)) squash = Math.min(squash, b.sy);
+    expect(squash).toBeLessThan(0.97);
+    expect(squash).toBeGreaterThan(0.8);
+    expect(b.sy).toBeCloseTo(1, 2);
+  });
+
+  it('with reduced motion she glides straight down: no bounce, no squash, no slide', () => {
+    const b = { ...body(-200), y: -500, vx: 2000 };
+    let squash = 1;
+    let bounced = false;
+    while (step(b, 1 / 60, bounds, true)) {
+      squash = Math.min(squash, b.sy);
+      if (b.vy < 0) bounced = true;
+    }
+    expect(b).toMatchObject({ x: -200, y: 0 });
+    expect(bounced).toBe(false);
+    expect(squash).toBe(1);
+  });
+
+  it('held, she follows the hand a beat behind, leans into the motion and lifts; let go, she swings upright', () => {
+    const b = { ...body(), held: true, tx: -400 };
+    step(b, 1 / 60, bounds);
+    expect(b.x).toBeLessThan(0);
+    expect(b.x).toBeGreaterThan(-400); // a beat behind, not snapped to the hand
+    for (let i = 0; i < 12; i++) step(b, 1 / 60, bounds);
+    expect(b.rot).toBeLessThan(-2);
+    expect(b.sx).toBeGreaterThan(1.02);
+    for (let i = 0; i < 60; i++) step(b, 1 / 60, bounds);
+    expect(b.x).toBeCloseTo(-400, 0);
+    release(b);
+    settle(b);
+    expect(Math.abs(b.rot)).toBeLessThan(0.05);
+  });
+
+  it("a throw keeps only part of the hand's speed, so a flick never sends her across the screen", () => {
+    const b = { ...body(-300), y: -300, held: true, vx: -6000, vy: -4000 };
+    release(b);
+    expect(b.held).toBe(false);
+    expect(Math.abs(b.vx)).toBeLessThanOrEqual(1500);
+    expect(Math.abs(b.vy)).toBeLessThanOrEqual(1500);
+    settle(b);
+    expect(b.y).toBe(0);
+  });
+
+  it('a 500 px fall takes about 0.7 s: weighty, not floaty, not instant', () => {
+    const b = { ...body(), y: -500 };
+    let frames = 0;
+    // The first landing: the moment she stops going down.
+    do {
+      step(b, 1 / 60, bounds);
+      frames++;
+    } while (b.vy > 0 && frames < 300);
+    expect(frames / 60).toBeGreaterThan(0.6);
+    expect(frames / 60).toBeLessThan(0.85);
+  });
+});
+
+describe('movable: the chat opens from where she stands', () => {
+  const VW = 1440;
+  it('on the right half it grows leftwards from her right edge', () => {
+    // Anchored right at 1420; she has been moved to 1000-1128.
+    const p = panelOffset({ left: 1000, right: 1128 }, 1420, 392, VW, 16);
+    expect(p.grow).toBe('left');
+    expect(1420 + p.x).toBe(1128); // the panel's right edge = hers
+  });
+  it('on the left half it grows rightwards from her left edge', () => {
+    const p = panelOffset({ left: 200, right: 328 }, 1420, 392, VW, 16);
+    expect(p.grow).toBe('right');
+    expect(1420 + p.x).toBe(200); // the panel's left edge = hers
+  });
+  it('is always kept on screen', () => {
+    const atEdge = panelOffset({ left: 4, right: 132 }, 1420, 392, VW, 16);
+    expect(1420 + atEdge.x).toBe(16);
+    const nearMiddleRight = panelOffset({ left: 740, right: 868 }, 1420, 392, VW, 16);
+    expect(1420 + nearMiddleRight.x - 392).toBeGreaterThanOrEqual(16);
+    // Anchored left: the open host's corner is its left edge.
+    const fromLeft = panelOffset({ left: 1200, right: 1328 }, 20, 392, VW, 16);
+    expect(20 + fromLeft.x).toBe(1328);
   });
 });

@@ -54,7 +54,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ------------------------------------------------------------ launcher */
-.dock { display: flex; align-items: flex-end; gap: 10px; }
+.dock { display: flex; align-items: flex-end; gap: 10px; scale: var(--cx-sq, 1); transform-origin: 50% 100%; }
 /* She sits in the corner and never moves; the buttons grow away from her. */
 :host([data-side="right"]) .dock { flex-direction: row-reverse; }
 .presence {
@@ -89,8 +89,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   color: var(--cx-ink); background: var(--cx-solid); border: 1px solid var(--cx-line); box-shadow: var(--cx-shadow);
   transition: opacity .2s, transform .3s var(--cx-ease);
 }
-:host([data-side="right"]) .presence__label { right: calc(100% + 10px); }
-:host([data-side="left"]) .presence__label { left: calc(100% + 10px); transform: translate(-6px, -50%); }
+:host([data-grow="left"]) .presence__label { right: calc(100% + 10px); }
+:host([data-grow="right"]) .presence__label { left: calc(100% + 10px); transform: translate(-6px, -50%); }
 .presence:hover .presence__label, .presence:focus-visible .presence__label { opacity: 1; transform: translate(0, -50%); }
 /* Waiting in line: the place, on her. */
 .presence__badge {
@@ -152,8 +152,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   background: var(--cx-solid); box-shadow: var(--cx-shadow); border: 1px solid var(--cx-line);
   font-size: 14px; color: var(--cx-ink); animation: cx-pop .55s var(--cx-spring) both; cursor: pointer;
 }
-:host([data-side="right"]) .greeting { right: 0; border-bottom-right-radius: 6px; }
-:host([data-side="left"]) .greeting { left: 0; border-bottom-left-radius: 6px; }
+:host([data-grow="left"]) .greeting { right: 0; border-bottom-right-radius: 6px; }
+:host([data-grow="right"]) .greeting { left: 0; border-bottom-left-radius: 6px; }
 .greeting__close { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: var(--cx-ink-3); }
 .greeting__close:hover { background: var(--cx-bubble); color: var(--cx-ink); }
 
@@ -167,8 +167,9 @@ button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px sol
   transform-origin: bottom right;
   animation: cx-open .5s var(--cx-ease) both;
 }
-:host([data-side="right"]) .panel { right: 0; }
-:host([data-side="left"]) .panel { left: 0; transform-origin: bottom left; }
+/* data-grow: which way she opens — away from her corner, or (movable) towards the middle. */
+:host([data-grow="left"]) .panel { right: 0; }
+:host([data-grow="right"]) .panel { left: 0; transform-origin: bottom left; }
 .panel.is-closing { animation: cx-close .22s ease-in both; }
 
 .head { display: flex; align-items: center; gap: 12px; padding: 14px 14px 12px 16px; border-bottom: 1px solid var(--cx-line); }

@@ -65,6 +65,7 @@ The defaults come from the key (set on the Embed page); anything passed here ove
 | `accent`, `mode`, `radius`, `font` | Colour, `auto` · `light` · `dark`, corner radius, font family |
 | `showChat`, `showCall`, `branding` | Turn chat, calls or the footer off |
 | `offsetX`, `offsetY`, `zIndex`, `container` | Placement |
+| `movable` | Visitors can drag her anywhere along the bottom (hold first on touch); let go higher up and she falls back down. The chat then opens from where she stands. Off by default |
 
 What the agent says (persona, knowledge, greeting) is the agent's own, set in Character XYZ.
 

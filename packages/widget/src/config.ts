@@ -49,6 +49,8 @@ export interface WidgetConfig {
    */
   face: boolean;
   faceUrl: string;
+  /** Visitors can pick her up and put her anywhere along the bottom; let go higher up and she falls back down. */
+  movable: boolean;
 }
 
 export const DEFAULTS: WidgetConfig = {
@@ -73,6 +75,7 @@ export const DEFAULTS: WidgetConfig = {
   open: false,
   face: true,
   faceUrl: 'https://www.character.xyz/embed/face',
+  movable: false,
 };
 
 const num = (v: unknown, lo: number, hi: number): number | undefined => {
@@ -135,6 +138,7 @@ export function applyLayer(base: WidgetConfig, raw: Record<string, unknown> | nu
   c.zIndex = num(raw.zIndex, 0, 2147483647) ?? c.zIndex;
   c.open = bool(raw.open) ?? c.open;
   c.face = bool(raw.face) ?? c.face;
+  c.movable = bool(raw.movable) ?? c.movable;
   if (typeof raw.faceUrl === 'string' && /^https?:\/\/[^\s"'<>]+$/.test(raw.faceUrl.trim())) c.faceUrl = raw.faceUrl.trim();
   return c;
 }

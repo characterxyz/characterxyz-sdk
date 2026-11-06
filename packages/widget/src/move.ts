@@ -18,6 +18,16 @@
  * quick swipe stays a tap or a scroll), with a short buzz when she lifts. The
  * spot is kept for the visit.
  *
+ * ⚠ iPad and iPhone (Safari): the hold is also when iOS starts its OWN long
+ * press (text selection on her label, the callout, an image drag), and Safari
+ * then cancels the touch, so she never lifted there (2026-11-06). The host is
+ * marked `data-movable` for the CSS that turns those off while she is closed,
+ * a touchstart listener that is not passive is what lets Safari honour
+ * `touch-action` on a custom element, and while she is held a non-passive
+ * touchmove keeps the page from scrolling under the finger. A small wobble of
+ * the finger during the hold (iPad screens are big) no longer counts as a
+ * scroll: it takes 12 px.
+ *
  * The physics is a pure `step` (tested); `attachMover` is the DOM around it.
  */
 
@@ -140,6 +150,8 @@ export function panelOffset(her: { left: number; right: number }, anchorX: numbe
 
 const HOLD_MS = 350;
 const MOVE_PX = 6;
+/** How far a finger may drift during the hold before it counts as a scroll. */
+const HOLD_SLOP_PX = 12;
 const MARGIN = 8;
 const PANEL_MARGIN = 16;
 /** Below this the panel is a full-width sheet that ignores where she is. */
@@ -224,6 +236,7 @@ export function attachMover(host: HTMLElement): () => void {
     b.x = b.tx = Number(sessionStorage.getItem(SPOT_KEY)) || 0;
   } catch {}
   css.transformOrigin = '50% 0';
+  host.setAttribute('data-movable', '');
   const settle = () => {
     css.touchAction = open() ? '' : 'none';
     if (!open() && measure()) face();
@@ -255,7 +268,7 @@ export function attachMover(host: HTMLElement): () => void {
     const mx = e.clientX - start.px;
     const my = e.clientY - start.py;
     if (!b.held) {
-      if (Math.hypot(mx, my) < MOVE_PX) return;
+      if (Math.hypot(mx, my) < (start.touch ? HOLD_SLOP_PX : MOVE_PX)) return;
       // A touch that moves before the hold completes is a scroll, not a drag.
       if (start.touch) return drop();
       lift();
@@ -281,6 +294,14 @@ export function attachMover(host: HTMLElement): () => void {
     e.preventDefault();
     e.stopPropagation();
   };
+  // Held: the page does not scroll under the finger (iOS ignores touch-action
+  // once a gesture is under way; a cancelled touchmove it does honour).
+  const onTouchMove = (e: TouchEvent) => {
+    if (b.held && e.cancelable) e.preventDefault();
+  };
+  // Not passive, so iOS treats the host as owning its touches (and so honours
+  // its touch-action); it cancels nothing, so a tap still opens the chat.
+  const onTouchStart = () => {};
   // A long press would otherwise open the system menu.
   const onMenu = (e: Event) => {
     if (b.held || start?.touch) e.preventDefault();
@@ -302,6 +323,8 @@ export function attachMover(host: HTMLElement): () => void {
   seen.observe(host, { attributes: true, attributeFilter: ['data-open'] });
 
   host.addEventListener('pointerdown', onDown);
+  host.addEventListener('touchstart', onTouchStart, { passive: false });
+  addEventListener('touchmove', onTouchMove, { passive: false });
   addEventListener('pointermove', onMove, { passive: false });
   addEventListener('pointerup', drop);
   addEventListener('pointercancel', drop);
@@ -314,6 +337,9 @@ export function attachMover(host: HTMLElement): () => void {
     cancelAnimationFrame(frame);
     seen.disconnect();
     host.removeEventListener('pointerdown', onDown);
+    host.removeEventListener('touchstart', onTouchStart);
+    removeEventListener('touchmove', onTouchMove);
+    host.removeAttribute('data-movable');
     removeEventListener('pointermove', onMove);
     removeEventListener('pointerup', drop);
     removeEventListener('pointercancel', drop);

@@ -35,6 +35,11 @@ export const CSS = /* css */ `
   line-height: 1.45;
 }
 :host([data-side="right"]) { right: var(--cx-ox, 20px); }
+/* Movable and closed: a long press is a pick-up, never iOS's own long press.
+   On iPad/iPhone that press otherwise starts a text selection on her label or
+   greeting, or the callout, and Safari cancels the touch before she lifts. */
+:host([data-movable]:not([data-open])) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+:host([data-movable]:not([data-open])) * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-user-drag: none; }
 :host([data-side="left"]) { left: var(--cx-ox, 20px); }
 :host([data-theme="dark"]) {
   --cx-bg: rgba(22, 20, 30, 0.78);
